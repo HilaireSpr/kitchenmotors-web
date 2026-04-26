@@ -6,6 +6,7 @@ import { colors } from "@/styles/colors";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -13,7 +14,7 @@ export function LoginForm() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!email) return;
+    if (!email || !password) return;
 
     setLoading(true);
     setMessage("");
@@ -21,25 +22,23 @@ export function LoginForm() {
 
     const supabase = createClient();
 
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
-      options: {
-        emailRedirectTo: `${location.origin}/auth/callback`,
-      },
+      password,
     });
 
     if (error) {
+      setIsError(true);
       setMessage(error.message);
-    } else {
-      setMessage("Check je mailbox. We hebben een loginlink gestuurd.");
+      setLoading(false);
+      return;
     }
 
+    window.location.href = "/dashboard";
+  }
+
   return (
-    <form
-      onSubmit={handleLogin}
-      className="stack"
-      style={{ gap: 14 }}
-    >
+    <form onSubmit={handleLogin} className="stack" style={{ gap: 14 }}>
       <input
         className="input"
         type="email"
@@ -49,10 +48,18 @@ export function LoginForm() {
         required
         autoFocus
         autoComplete="email"
-        style={{
-          minHeight: 48,
-          borderRadius: 12,
-        }}
+        style={{ minHeight: 48, borderRadius: 12 }}
+      />
+
+      <input
+        className="input"
+        type="password"
+        placeholder="Wachtwoord"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+        autoComplete="current-password"
+        style={{ minHeight: 48, borderRadius: 12 }}
       />
 
       <button
@@ -66,7 +73,7 @@ export function LoginForm() {
           border: "none",
         }}
       >
-        {loading ? "Bezig..." : "Verstuur magic link"}
+        {loading ? "Bezig..." : "Inloggen"}
       </button>
 
       {message ? (
