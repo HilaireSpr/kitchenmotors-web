@@ -30,7 +30,7 @@ export function LoginForm() {
 
     if (error) {
       setIsError(true);
-      setMessage("Er ging iets mis. Probeer opnieuw.");
+      setMessage(error.message);
       setLoading(false);
       return;
     }
