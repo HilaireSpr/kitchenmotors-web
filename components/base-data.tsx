@@ -46,13 +46,11 @@ export default function BaseData() {
       ]);
 
       if (!postRes.ok) {
-        const text = await postRes.text();
-        throw new Error(`Posten laden mislukt: ${text}`);
+        throw new Error("Basisdata kan nog niet geladen worden. De API is nog niet verbonden.");
       }
 
       if (!toestelRes.ok) {
-        const text = await toestelRes.text();
-        throw new Error(`Toestellen laden mislukt: ${text}`);
+        throw new Error("Toestellen kunnen nog niet geladen worden. De API is nog niet verbonden.");
       }
 
       const postJson = await postRes.json();
