@@ -24,21 +24,15 @@ export function LoginForm() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${location.origin}/auth/callback`,
       },
     });
 
     if (error) {
-      setIsError(true);
       setMessage(error.message);
-      setLoading(false);
-      return;
+    } else {
+      setMessage("Check je mailbox. We hebben een loginlink gestuurd.");
     }
-
-    setIsError(false);
-    setMessage("Check je mailbox voor de login link ✉️");
-    setLoading(false);
-  }
 
   return (
     <form
