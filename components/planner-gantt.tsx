@@ -110,38 +110,39 @@ function isBreakRow(row: PlannerRow) {
 }
 
 function normalizeRows(rows: PlannerRow[]): GanttTask[] {
-  return rows
-    .map((row, index) => {
-      const start = parseDate(row.Start);
-      const end = parseDate(row.Einde);
+  const tasks: GanttTask[] = [];
 
-      if (!start || !end) return null;
+  rows.forEach((row, index) => {
+    const start = parseDate(row.Start);
+    const end = parseDate(row.Einde);
 
-      const planningId =
-        row["Planning ID"] ?? `row-${index}-${row.Post ?? "post"}-${row.Start ?? "start"}`;
+    if (!start || !end) return;
 
-      return {
-        planningId,
-        receptId: row["Recept ID"] ?? null,
-        handelingId: row["Handeling ID"] ?? null,
-        recipeLabel: row.Recept || "",
-        label: row.Taak || row.Recept || "Onbekende taak",
-        post: row.Post || "Onbekende post",
-        toestel: row.Toestel || null,
-        werkdagIso: row.Werkdag_iso || start.toISOString().slice(0, 10),
-        start,
-        end,
-        hasConflict: row["Toestel conflict"] === true,
-        isBreak: isBreakRow(row),
-        isFixed: row["Is vaste taak"] === true,
-        isLocked: row.Locked === true,
-        activeMinutes: getNumber(row["Actieve tijd"]),
-        passiveMinutes: getNumber(row["Passieve tijd"]),
-      };
-    })
-    .filter((task): task is GanttTask => Boolean(task));
+    const planningId =
+      row["Planning ID"] ?? `row-${index}-${row.Post ?? "post"}-${row.Start ?? "start"}`;
+
+    tasks.push({
+      planningId,
+      receptId: row["Recept ID"] ?? null,
+      handelingId: row["Handeling ID"] ?? null,
+      recipeLabel: row.Recept || "",
+      label: row.Taak || row.Recept || "Onbekende taak",
+      post: row.Post || "Onbekende post",
+      toestel: row.Toestel || null,
+      werkdagIso: row.Werkdag_iso || start.toISOString().slice(0, 10),
+      start,
+      end,
+      hasConflict: row["Toestel conflict"] === true,
+      isBreak: isBreakRow(row),
+      isFixed: row["Is vaste taak"] === true,
+      isLocked: row.Locked === true,
+      activeMinutes: getNumber(row["Actieve tijd"]),
+      passiveMinutes: getNumber(row["Passieve tijd"]),
+    });
+  });
+
+  return tasks;
 }
-
 function startOfHour(date: Date) {
   const d = new Date(date);
   d.setMinutes(0, 0, 0);
