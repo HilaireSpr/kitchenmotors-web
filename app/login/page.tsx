@@ -22,6 +22,7 @@ function getErrorMessage(error?: string) {
 
 export default async function LoginPage({ searchParams }: Props) {
   const supabase = await createClient();
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -106,6 +107,25 @@ export default async function LoginPage({ searchParams }: Props) {
           )}
 
           <LoginForm />
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginTop: 4,
+            }}
+          >
+            <Link
+              href="/forgot-password"
+              style={{
+                fontSize: 14,
+                color: colors.textMuted,
+                textDecoration: "underline",
+              }}
+            >
+              Wachtwoord vergeten?
+            </Link>
+          </div>
         </div>
       </section>
     </main>

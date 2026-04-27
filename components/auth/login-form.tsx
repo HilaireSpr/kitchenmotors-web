@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 import { colors } from "@/styles/colors";
@@ -75,6 +76,18 @@ export function LoginForm() {
       >
         {loading ? "Bezig..." : "Inloggen"}
       </button>
+
+      <Link
+        href="/forgot-password"
+        style={{
+          fontSize: 13,
+          color: colors.textMuted,
+          textAlign: "center",
+          textDecoration: "underline",
+        }}
+      >
+        Wachtwoord vergeten?
+      </Link>
 
       {message ? (
         <div
