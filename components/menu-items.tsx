@@ -1259,41 +1259,50 @@ export default function MenuItems() {
                         style={{
                           alignSelf: "center",
                           display: "flex",
-                          gap: 8,
+                          gap: 12,
                           flexWrap: "wrap",
+                          alignItems: "flex-end",
                         }}
                       >
                         {editingItemId === item.id ? (
                           <>
-                            <select
-                              value={editServeerdag}
-                              onChange={(e) => setEditServeerdag(e.target.value)}
-                              style={{
-                                ...inputStyle,
-                                width: 150,
-                                padding: "10px 12px",
-                              }}
-                            >
-                              <option value="">Kies dag</option>
-                              {WEEKDAGEN.map((dag) => (
-                                <option key={dag} value={dag}>
-                                  {capitalize(dag)}
-                                </option>
-                              ))}
-                            </select>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                              <div style={labelStyle}>Serveerdag</div>
 
-                            <input
-                              value={editCyclusWeek}
-                              onChange={(e) => setEditCyclusWeek(e.target.value)}
-                              placeholder="Week"
-                              type="number"
-                              min={1}
-                              style={{
-                                ...inputStyle,
-                                width: 90,
-                                padding: "10px 12px",
-                              }}
-                            />
+                              <select
+                                value={editServeerdag}
+                                onChange={(e) => setEditServeerdag(e.target.value)}
+                                style={{
+                                  ...inputStyle,
+                                  width: 150,
+                                  padding: "10px 12px",
+                                }}
+                              >
+                                <option value="">Kies dag</option>
+                                {WEEKDAGEN.map((dag) => (
+                                  <option key={dag} value={dag}>
+                                    {capitalize(dag)}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                              <div style={labelStyle}>Serveerweek</div>
+
+                              <input
+                                value={editCyclusWeek}
+                                onChange={(e) => setEditCyclusWeek(e.target.value)}
+                                placeholder="Week"
+                                type="number"
+                                min={1}
+                                style={{
+                                  ...inputStyle,
+                                  width: 110,
+                                  padding: "10px 12px",
+                                }}
+                              />
+                            </div>
 
                             <button
                               className="button"
@@ -1363,14 +1372,3 @@ export default function MenuItems() {
                           </>
                         )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
