@@ -839,18 +839,42 @@ export default function PlannerTest() {
         >
           <div>
             <div style={labelStyle}>Menu-groep</div>
-            <select
-              style={inputStyle}
-              value={selectedMenuGroup}
-              onChange={(e) => setSelectedMenuGroup(e.target.value)}
-            >
-              <option value="all">Alle menu-groepen</option>
-              {menuGroups.map((groep) => (
-                <option key={groep} value={groep}>
-                  {groep}
-                </option>
-              ))}
-            </select>
+
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <select
+                style={inputStyle}
+                value={selectedMenuGroup}
+                onChange={(e) => setSelectedMenuGroup(e.target.value)}
+                onFocus={loadMenuGroups}
+              >
+                <option value="all">Alle menu-groepen</option>
+                {menuGroups.map((groep) => (
+                  <option key={groep} value={groep}>
+                    {groep}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={() => {
+                  loadMenuGroups();
+                  loadPlanningStarturen();
+                  loadPostColors();
+                }}
+                style={{
+                  background: colors.bg,
+                  color: colors.text,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Ververs
+              </button>
+            </div>
           </div>
 
           <div>
