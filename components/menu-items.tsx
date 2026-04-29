@@ -183,6 +183,9 @@ export default function MenuItems() {
 
   const [openGroups, setOpenGroups] = useState<string[]>([]);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
+  const [editServeerdag, setEditServeerdag] = useState("");
+  const [editCyclusWeek, setEditCyclusWeek] = useState("");
 
   async function loadData() {
     setLoading(true);
@@ -475,6 +478,56 @@ export default function MenuItems() {
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kon menu-item niet verwijderen");
+    }
+  }
+
+  function startEditMenuItem(item: MenuItemRow) {
+    setEditingItemId(item.id);
+    setEditServeerdag(item.serveerdag || "");
+    setEditCyclusWeek(item.cyclus_week ? String(item.cyclus_week) : "");
+  }
+
+  function cancelEditMenuItem() {
+    setEditingItemId(null);
+    setEditServeerdag("");
+    setEditCyclusWeek("");
+  }
+
+  async function handleUpdateMenuItem(item: MenuItemRow) {
+    setError("");
+
+    const cyclusDag = getCyclusDagFromServeerdag(editServeerdag);
+
+    if (!editServeerdag || !cyclusDag) {
+      setError("Kies een geldige serveerdag.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/v1/menu/items/${item.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          serveerdag: editServeerdag,
+          cyclus_week: editCyclusWeek ? Number(editCyclusWeek) : null,
+          cyclus_dag: cyclusDag,
+          menu_groep: item.menu_groep,
+          ritme_type: item.ritme_type,
+          ritme_interval_weken: item.ritme_interval_weken,
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Kon menu-item niet aanpassen");
+      }
+
+      cancelEditMenuItem();
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kon menu-item niet aanpassen");
     }
   }
 
@@ -1202,22 +1255,113 @@ export default function MenuItems() {
                         </div>
                       </div>
 
-                      <div style={{ alignSelf: "center" }}>
-                        <button
-                          className="button"
-                          type="button"
-                          onClick={() => handleDeleteMenuItem(item.id)}
-                          style={{
-                            background: colors.bg,
-                            color: colors.text,
-                            border: `1px solid ${colors.border}`,
-                            borderRadius: 12,
-                            padding: "10px 14px",
-                            fontWeight: 600,
-                          }}
-                        >
-                          Verwijderen
-                        </button>
+                      <div
+                        style={{
+                          alignSelf: "center",
+                          display: "flex",
+                          gap: 8,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        {editingItemId === item.id ? (
+                          <>
+                            <select
+                              value={editServeerdag}
+                              onChange={(e) => setEditServeerdag(e.target.value)}
+                              style={{
+                                ...inputStyle,
+                                width: 150,
+                                padding: "10px 12px",
+                              }}
+                            >
+                              <option value="">Kies dag</option>
+                              {WEEKDAGEN.map((dag) => (
+                                <option key={dag} value={dag}>
+                                  {capitalize(dag)}
+                                </option>
+                              ))}
+                            </select>
+
+                            <input
+                              value={editCyclusWeek}
+                              onChange={(e) => setEditCyclusWeek(e.target.value)}
+                              placeholder="Week"
+                              type="number"
+                              min={1}
+                              style={{
+                                ...inputStyle,
+                                width: 90,
+                                padding: "10px 12px",
+                              }}
+                            />
+
+                            <button
+                              className="button"
+                              type="button"
+                              onClick={() => handleUpdateMenuItem(item)}
+                              style={{
+                                background: colors.primary,
+                                color: colors.text,
+                                border: "none",
+                                borderRadius: 12,
+                                padding: "10px 14px",
+                                fontWeight: 700,
+                              }}
+                            >
+                              Opslaan
+                            </button>
+
+                            <button
+                              className="button"
+                              type="button"
+                              onClick={cancelEditMenuItem}
+                              style={{
+                                background: colors.bg,
+                                color: colors.text,
+                                border: `1px solid ${colors.border}`,
+                                borderRadius: 12,
+                                padding: "10px 14px",
+                                fontWeight: 600,
+                              }}
+                            >
+                              Annuleren
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              className="button"
+                              type="button"
+                              onClick={() => startEditMenuItem(item)}
+                              style={{
+                                background: colors.primarySoft,
+                                color: colors.text,
+                                border: `1px solid ${colors.primaryLight}`,
+                                borderRadius: 12,
+                                padding: "10px 14px",
+                                fontWeight: 700,
+                              }}
+                            >
+                              Bewerken
+                            </button>
+
+                            <button
+                              className="button"
+                              type="button"
+                              onClick={() => handleDeleteMenuItem(item.id)}
+                              style={{
+                                background: colors.bg,
+                                color: colors.text,
+                                border: `1px solid ${colors.border}`,
+                                borderRadius: 12,
+                                padding: "10px 14px",
+                                fontWeight: 600,
+                              }}
+                            >
+                              Verwijderen
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}
