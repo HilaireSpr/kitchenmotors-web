@@ -845,8 +845,8 @@ export default function PlannerTest() {
               style={inputStyle}
               value={selectedMenuGroup}
               onChange={(e) => setSelectedMenuGroup(e.target.value)}
-            >
               onFocus={loadMenuGroups}
+            >
               <option value="all">Alle menu-groepen</option>
               {menuGroups.map((groep) => (
                 <option key={groep} value={groep}>
