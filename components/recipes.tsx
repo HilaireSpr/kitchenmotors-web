@@ -134,14 +134,14 @@ export default function ImportRecipes() {
   const [openCategories, setOpenCategories] = useState<string[]>([]);
 
   const [editingHandelingId, setEditingHandelingId] = useState<number | null>(null);
-  const [savingHandeling, setSavingHandeling] = useState(false);
+  const [savingHandelingId, setSavingHandelingId] = useState<number | null>(null);
   const [openHandelingIds, setOpenHandelingIds] = useState<number[]>([]);
   const [handelingForm, setHandelingForm] = useState<HandelingFormState>(
     createEmptyHandelingForm()
   );
 
   const [editingStapId, setEditingStapId] = useState<number | null>(null);
-  const [savingStap, setSavingStap] = useState(false);
+  const [savingStapId, setSavingStapId] = useState<number | null>(null);
   const [stapForm, setStapForm] = useState<StapFormState>(createEmptyStapForm());
 
   async function loadRecipes() {
@@ -154,9 +154,7 @@ export default function ImportRecipes() {
       }
 
       const json = await res.json();
-      const loadedRecipes = json.result ?? [];
-
-      setRecipes(loadedRecipes);
+      setRecipes(json.result ?? []);
       setOpenCategories([]);
     } catch (err) {
       console.error("Fout bij ophalen receptenlijst:", err);
@@ -164,7 +162,7 @@ export default function ImportRecipes() {
     }
   }
 
-  async function loadRecipeDetail(receptCode: string) {
+  async function loadRecipeDetail(receptCode: string, resetEditState = true) {
     try {
       const res = await fetch(`${API_URL}/api/v1/recipes/${receptCode}`);
 
@@ -174,17 +172,24 @@ export default function ImportRecipes() {
       }
 
       const json = await res.json();
-
       setRecipeDetail(json.result ?? null);
-      setOpenHandelingIds([]);
-      setEditingHandelingId(null);
-      setEditingStapId(null);
-      setHandelingForm(createEmptyHandelingForm());
-      setStapForm(createEmptyStapForm());
+
+      if (resetEditState) {
+        setOpenHandelingIds([]);
+        setEditingHandelingId(null);
+        setEditingStapId(null);
+        setHandelingForm(createEmptyHandelingForm());
+        setStapForm(createEmptyStapForm());
+      }
     } catch (err) {
       console.error("Fout bij ophalen receptdetail:", err);
       setRecipeDetail(null);
     }
+  }
+
+  async function reloadSelectedRecipeDetail() {
+    if (!selectedRecipe) return;
+    await loadRecipeDetail(selectedRecipe, false);
   }
 
   async function handleUpload() {
@@ -224,6 +229,7 @@ export default function ImportRecipes() {
 
   function startEditHandeling(handeling: RecipeHandeling) {
     setEditingHandelingId(handeling.handeling_id);
+    setEditingStapId(null);
     setHandelingForm({
       naam: handeling.handeling_naam || "",
       post: handeling.post || "",
@@ -253,6 +259,7 @@ export default function ImportRecipes() {
 
   function startEditStap(stap: RecipeStep) {
     setEditingStapId(stap.stap_id);
+    setEditingHandelingId(null);
     setStapForm({
       naam: stap.stap_naam || "",
       tijd: stap.stap_tijd ?? 0,
@@ -276,15 +283,20 @@ export default function ImportRecipes() {
 
   async function saveStap(stapId: number) {
     try {
-      setSavingStap(true);
+      setSavingStapId(stapId);
       setError("");
+
+      const payload = {
+        naam: stapForm.naam,
+        tijd: Number(stapForm.tijd) || 0,
+      };
 
       const res = await fetch(`${API_URL}/api/v1/recipes/stappen/${stapId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(stapForm),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -292,28 +304,42 @@ export default function ImportRecipes() {
         throw new Error(text);
       }
 
-      if (selectedRecipe) {
-        await loadRecipeDetail(selectedRecipe);
-      }
-
+      await reloadSelectedRecipeDetail();
       cancelEditStap();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fout bij opslaan stap");
     } finally {
-      setSavingStap(false);
+      setSavingStapId(null);
     }
   }
 
   async function saveHandeling(handelingId: number) {
     try {
-      setSavingHandeling(true);
+      setSavingHandelingId(handelingId);
       setError("");
 
+      const dagOffset = parseIntegerString(handelingForm.dag_offset, 0);
+      const dagOffsetMin = parseIntegerString(handelingForm.dag_offset_min, 0);
+      const dagOffsetMax = parseIntegerString(handelingForm.dag_offset_max, 0);
+
       const payload = {
-        ...handelingForm,
-        dag_offset: parseIntegerString(handelingForm.dag_offset, 0),
-        dag_offset_min: parseIntegerString(handelingForm.dag_offset_min, 0),
-        dag_offset_max: parseIntegerString(handelingForm.dag_offset_max, 0),
+        naam: handelingForm.naam,
+        handeling_naam: handelingForm.naam,
+
+        post: handelingForm.post,
+        toestel: handelingForm.toestel,
+
+        dag_offset: dagOffset,
+        min_offset_dagen: dagOffsetMin,
+        max_offset_dagen: dagOffsetMax,
+
+        passieve_tijd: Number(handelingForm.passieve_tijd) || 0,
+
+        is_vaste_taak: handelingForm.is_vaste_taak,
+        heeft_vast_startuur: handelingForm.heeft_vast_startuur,
+        vast_startuur: handelingForm.heeft_vast_startuur
+          ? handelingForm.vast_startuur
+          : "",
       };
 
       const res = await fetch(`${API_URL}/api/v1/recipes/handelingen/${handelingId}`, {
@@ -329,15 +355,12 @@ export default function ImportRecipes() {
         throw new Error(text);
       }
 
-      if (selectedRecipe) {
-        await loadRecipeDetail(selectedRecipe);
-      }
-
+      await reloadSelectedRecipeDetail();
       cancelEditHandeling();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fout bij opslaan handeling");
     } finally {
-      setSavingHandeling(false);
+      setSavingHandelingId(null);
     }
   }
 
@@ -371,20 +394,8 @@ export default function ImportRecipes() {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 16,
-      }}
-    >
-      <div
-        className="card"
-        style={{
-          ...cardStyle,
-          padding: 16,
-        }}
-      >
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className="card" style={{ ...cardStyle, padding: 16 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <h2 style={{ margin: 0 }}>Recepten</h2>
           <p style={{ margin: 0, color: colors.textMuted }}>
@@ -451,13 +462,7 @@ export default function ImportRecipes() {
               Nog geen recepten gevonden.
             </div>
           ) : (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-              }}
-            >
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {recipesByCategory.map(({ category, items }) => {
                 const isOpen = openCategories.includes(category);
 
@@ -515,14 +520,7 @@ export default function ImportRecipes() {
                     </div>
 
                     {isOpen ? (
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 6,
-                          padding: 8,
-                        }}
-                      >
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: 8 }}>
                         {items.map((recipe) => (
                           <button
                             key={recipe.recept_code}
@@ -568,14 +566,7 @@ export default function ImportRecipes() {
           )}
         </div>
 
-        <div
-          className="card"
-          style={{
-            ...cardStyle,
-            padding: 16,
-            minHeight: 420,
-          }}
-        >
+        <div className="card" style={{ ...cardStyle, padding: 16, minHeight: 420 }}>
           {!recipeDetail ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <h3 style={{ margin: 0 }}>Receptdetail</h3>
@@ -624,65 +615,28 @@ export default function ImportRecipes() {
                   gap: 12,
                 }}
               >
-                <div
-                  style={{
-                    padding: 12,
-                    borderRadius: 10,
-                    border: `1px solid ${colors.border}`,
-                    background: colors.bgMuted,
-                  }}
-                >
-                  <div style={{ fontSize: 12, color: colors.textMuted }}>Handelingen</div>
-                  <div style={{ fontSize: 24, fontWeight: 700 }}>
-                    {recipeDetail.handelingen.length}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    padding: 12,
-                    borderRadius: 10,
-                    border: `1px solid ${colors.border}`,
-                    background: colors.bgMuted,
-                  }}
-                >
-                  <div style={{ fontSize: 12, color: colors.textMuted }}>
-                    Totale actieve tijd
-                  </div>
-                  <div style={{ fontSize: 24, fontWeight: 700 }}>
-                    {recipeDetail.handelingen.reduce(
-                      (sum, h) => sum + (h.actieve_tijd ?? 0),
-                      0
-                    )}{" "}
-                    min
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    padding: 12,
-                    borderRadius: 10,
-                    border: `1px solid ${colors.border}`,
-                    background: colors.bgMuted,
-                  }}
-                >
-                  <div style={{ fontSize: 12, color: colors.textMuted }}>
-                    Totale passieve tijd
-                  </div>
-                  <div style={{ fontSize: 24, fontWeight: 700 }}>
-                    {recipeDetail.handelingen.reduce(
-                      (sum, h) => sum + (h.passieve_tijd ?? 0),
-                      0
-                    )}{" "}
-                    min
-                  </div>
-                </div>
+                <SummaryCard label="Handelingen" value={recipeDetail.handelingen.length} />
+                <SummaryCard
+                  label="Totale actieve tijd"
+                  value={`${recipeDetail.handelingen.reduce(
+                    (sum, h) => sum + (h.actieve_tijd ?? 0),
+                    0
+                  )} min`}
+                />
+                <SummaryCard
+                  label="Totale passieve tijd"
+                  value={`${recipeDetail.handelingen.reduce(
+                    (sum, h) => sum + (h.passieve_tijd ?? 0),
+                    0
+                  )} min`}
+                />
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {recipeDetail.handelingen.map((handeling) => {
                   const isOpen = openHandelingIds.includes(handeling.handeling_id);
                   const isEditing = editingHandelingId === handeling.handeling_id;
+                  const isSaving = savingHandelingId === handeling.handeling_id;
 
                   return (
                     <div
@@ -794,65 +748,29 @@ export default function ImportRecipes() {
                                   gap: 12,
                                 }}
                               >
-                                <label
-                                  style={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 6,
-                                  }}
-                                >
-                                  <span style={labelTextStyle}>Handeling naam</span>
-                                  <input
-                                    value={handelingForm.naam}
-                                    onChange={(e) =>
-                                      setHandelingForm((prev) => ({
-                                        ...prev,
-                                        naam: e.target.value,
-                                      }))
-                                    }
-                                    style={inputStyle}
-                                  />
-                                </label>
+                                <TextInput
+                                  label="Handeling naam"
+                                  value={handelingForm.naam}
+                                  onChange={(value) =>
+                                    setHandelingForm((prev) => ({ ...prev, naam: value }))
+                                  }
+                                />
 
-                                <label
-                                  style={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 6,
-                                  }}
-                                >
-                                  <span style={labelTextStyle}>Post</span>
-                                  <input
-                                    value={handelingForm.post}
-                                    onChange={(e) =>
-                                      setHandelingForm((prev) => ({
-                                        ...prev,
-                                        post: e.target.value,
-                                      }))
-                                    }
-                                    style={inputStyle}
-                                  />
-                                </label>
+                                <TextInput
+                                  label="Post"
+                                  value={handelingForm.post}
+                                  onChange={(value) =>
+                                    setHandelingForm((prev) => ({ ...prev, post: value }))
+                                  }
+                                />
 
-                                <label
-                                  style={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 6,
-                                  }}
-                                >
-                                  <span style={labelTextStyle}>Toestel</span>
-                                  <input
-                                    value={handelingForm.toestel}
-                                    onChange={(e) =>
-                                      setHandelingForm((prev) => ({
-                                        ...prev,
-                                        toestel: e.target.value,
-                                      }))
-                                    }
-                                    style={inputStyle}
-                                  />
-                                </label>
+                                <TextInput
+                                  label="Toestel"
+                                  value={handelingForm.toestel}
+                                  onChange={(value) =>
+                                    setHandelingForm((prev) => ({ ...prev, toestel: value }))
+                                  }
+                                />
                               </div>
 
                               <div
@@ -863,29 +781,19 @@ export default function ImportRecipes() {
                                   alignItems: "start",
                                 }}
                               >
-                                <label
-                                  style={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 6,
-                                  }}
-                                >
+                                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                   <span style={labelTextStyle}>
                                     Voorkeursdag t.o.v. serveerdag
                                   </span>
                                   <input
-                                    type="text"
+                                    type="number"
                                     value={handelingForm.dag_offset}
-                                    onFocus={(e) => e.target.select()}
-                                    onChange={(e) => {
-                                      const value = e.target.value;
-                                      if (!isValidIntegerInput(value)) return;
-
+                                    onChange={(e) =>
                                       setHandelingForm((prev) => ({
                                         ...prev,
-                                        dag_offset: value,
-                                      }));
-                                    }}
+                                        dag_offset: e.target.value,
+                                      }))
+                                    }
                                     style={inputStyle}
                                   />
                                   <span
@@ -906,76 +814,38 @@ export default function ImportRecipes() {
                                     gap: 12,
                                   }}
                                 >
-                                  <label
-                                    style={{
-                                      display: "flex",
-                                      flexDirection: "column",
-                                      gap: 6,
-                                    }}
-                                  >
-                                    <span style={labelTextStyle}>Vroegste dag</span>
-                                    <input
-                                      type="text"
-                                      value={handelingForm.dag_offset_min}
-                                      onFocus={(e) => e.target.select()}
-                                      onChange={(e) => {
-                                        const value = e.target.value;
-                                        if (!isValidIntegerInput(value)) return;
+                                  <IntegerInput
+                                    label="Vroegste dag"
+                                    value={handelingForm.dag_offset_min}
+                                    onChange={(value) =>
+                                      setHandelingForm((prev) => ({
+                                        ...prev,
+                                        dag_offset_min: value,
+                                      }))
+                                    }
+                                  />
 
-                                        setHandelingForm((prev) => ({
-                                          ...prev,
-                                          dag_offset_min: value,
-                                        }));
-                                      }}
-                                      style={inputStyle}
-                                    />
-                                  </label>
+                                  <IntegerInput
+                                    label="Laatste dag"
+                                    value={handelingForm.dag_offset_max}
+                                    onChange={(value) =>
+                                      setHandelingForm((prev) => ({
+                                        ...prev,
+                                        dag_offset_max: value,
+                                      }))
+                                    }
+                                  />
 
-                                  <label
-                                    style={{
-                                      display: "flex",
-                                      flexDirection: "column",
-                                      gap: 6,
-                                    }}
-                                  >
-                                    <span style={labelTextStyle}>Laatste dag</span>
-                                    <input
-                                      type="text"
-                                      value={handelingForm.dag_offset_max}
-                                      onFocus={(e) => e.target.select()}
-                                      onChange={(e) => {
-                                        const value = e.target.value;
-                                        if (!isValidIntegerInput(value)) return;
-
-                                        setHandelingForm((prev) => ({
-                                          ...prev,
-                                          dag_offset_max: value,
-                                        }));
-                                      }}
-                                      style={inputStyle}
-                                    />
-                                  </label>
-
-                                  <label
-                                    style={{
-                                      display: "flex",
-                                      flexDirection: "column",
-                                      gap: 6,
-                                    }}
-                                  >
-                                    <span style={labelTextStyle}>Passieve tijd</span>
-                                    <input
-                                      type="number"
-                                      value={handelingForm.passieve_tijd}
-                                      onChange={(e) =>
-                                        setHandelingForm((prev) => ({
-                                          ...prev,
-                                          passieve_tijd: Number(e.target.value),
-                                        }))
-                                      }
-                                      style={inputStyle}
-                                    />
-                                  </label>
+                                  <NumberInput
+                                    label="Passieve tijd"
+                                    value={handelingForm.passieve_tijd}
+                                    onChange={(value) =>
+                                      setHandelingForm((prev) => ({
+                                        ...prev,
+                                        passieve_tijd: value,
+                                      }))
+                                    }
+                                  />
                                 </div>
                               </div>
 
@@ -1073,21 +943,27 @@ export default function ImportRecipes() {
                                 <button
                                   type="button"
                                   className="button"
-                                  onClick={() => saveHandeling(handeling.handeling_id)}
-                                  disabled={savingHandeling}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    saveHandeling(handeling.handeling_id);
+                                  }}
+                                  disabled={isSaving}
                                   style={{
                                     background: colors.primary,
                                     color: colors.text,
                                   }}
                                 >
-                                  {savingHandeling ? "Opslaan..." : "Opslaan"}
+                                  {isSaving ? "Opslaan..." : "Opslaan"}
                                 </button>
 
                                 <button
                                   type="button"
                                   className="button"
-                                  onClick={cancelEditHandeling}
-                                  disabled={savingHandeling}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    cancelEditHandeling();
+                                  }}
+                                  disabled={isSaving}
                                   style={{
                                     background: colors.bgMuted,
                                     color: colors.text,
@@ -1100,100 +976,7 @@ export default function ImportRecipes() {
                             </div>
                           ) : null}
 
-                          <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-                              gap: 10,
-                              marginBottom: 12,
-                            }}
-                          >
-                            <div
-                              style={{
-                                padding: 10,
-                                borderRadius: 8,
-                                background: colors.bgMuted,
-                              }}
-                            >
-                              <div style={{ fontSize: 12, color: colors.textMuted }}>
-                                Toegelaten venster
-                              </div>
-                              <div style={{ fontWeight: 700 }}>
-                                {handeling.dag_offset_min} → {handeling.dag_offset_max}
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: 11,
-                                  color: colors.textMuted,
-                                  marginTop: 4,
-                                }}
-                              >
-                                Voorkeur: {handeling.dag_offset}
-                              </div>
-                            </div>
-
-                            <div
-                              style={{
-                                padding: 10,
-                                borderRadius: 8,
-                                background: colors.bgMuted,
-                              }}
-                            >
-                              <div style={{ fontSize: 12, color: colors.textMuted }}>
-                                Actieve tijd
-                              </div>
-                              <div style={{ fontWeight: 700 }}>
-                                {handeling.actieve_tijd} min
-                              </div>
-                            </div>
-
-                            <div
-                              style={{
-                                padding: 10,
-                                borderRadius: 8,
-                                background: colors.bgMuted,
-                              }}
-                            >
-                              <div style={{ fontSize: 12, color: colors.textMuted }}>
-                                Passieve tijd
-                              </div>
-                              <div style={{ fontWeight: 700 }}>
-                                {handeling.passieve_tijd} min
-                              </div>
-                            </div>
-
-                            <div
-                              style={{
-                                padding: 10,
-                                borderRadius: 8,
-                                background: colors.bgMuted,
-                              }}
-                            >
-                              <div style={{ fontSize: 12, color: colors.textMuted }}>
-                                Totale duur
-                              </div>
-                              <div style={{ fontWeight: 700 }}>
-                                {handeling.totale_duur} min
-                              </div>
-                            </div>
-
-                            <div
-                              style={{
-                                padding: 10,
-                                borderRadius: 8,
-                                background: colors.bgMuted,
-                              }}
-                            >
-                              <div style={{ fontSize: 12, color: colors.textMuted }}>
-                                Vast startuur
-                              </div>
-                              <div style={{ fontWeight: 700 }}>
-                                {handeling.heeft_vast_startuur
-                                  ? handeling.vast_startuur || "-"
-                                  : "Nee"}
-                              </div>
-                            </div>
-                          </div>
+                          <HandelingStats handeling={handeling} />
 
                           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             <div
@@ -1217,15 +1000,10 @@ export default function ImportRecipes() {
                                 Geen stappen gevonden.
                               </div>
                             ) : (
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  gap: 6,
-                                }}
-                              >
+                              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                 {handeling.stappen.map((step) => {
                                   const isEditingStep = editingStapId === step.stap_id;
+                                  const isSavingStep = savingStapId === step.stap_id;
 
                                   return (
                                     <div
@@ -1290,16 +1068,24 @@ export default function ImportRecipes() {
 
                                             <button
                                               type="button"
-                                              onClick={() => saveStap(step.stap_id)}
-                                              disabled={savingStap}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                saveStap(step.stap_id);
+                                              }}
+                                              disabled={isSavingStep}
+                                              title="Opslaan"
                                             >
-                                              💾
+                                              {isSavingStep ? "..." : "💾"}
                                             </button>
 
                                             <button
                                               type="button"
-                                              onClick={cancelEditStap}
-                                              disabled={savingStap}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                cancelEditStap();
+                                              }}
+                                              disabled={isSavingStep}
+                                              title="Annuleren"
                                             >
                                               ✖
                                             </button>
@@ -1332,7 +1118,10 @@ export default function ImportRecipes() {
 
                                             <button
                                               type="button"
-                                              onClick={() => startEditStap(step)}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                startEditStap(step);
+                                              }}
                                               style={{ fontSize: 12 }}
                                             >
                                               ✏️
@@ -1357,13 +1146,7 @@ export default function ImportRecipes() {
         </div>
       </div>
 
-      <div
-        className="card"
-        style={{
-          ...cardStyle,
-          padding: 16,
-        }}
-      >
+      <div className="card" style={{ ...cardStyle, padding: 16 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <h3 style={{ margin: 0 }}>Import recepten (Excel)</h3>
           <p style={{ margin: 0, color: colors.textMuted, fontSize: 14 }}>
@@ -1429,53 +1212,154 @@ export default function ImportRecipes() {
               gap: 12,
             }}
           >
-            <div
-              className="card"
-              style={{
-                border: `1px solid ${colors.border}`,
-                background: colors.bgMuted,
-                borderRadius: 10,
-                padding: 12,
-              }}
-            >
-              <div style={{ fontSize: 12, color: colors.textMuted }}>Recepten</div>
-              <div style={{ fontSize: 24, fontWeight: 700 }}>
-                {result.recepten ?? 0}
-              </div>
-            </div>
-
-            <div
-              className="card"
-              style={{
-                border: `1px solid ${colors.border}`,
-                background: colors.bgMuted,
-                borderRadius: 10,
-                padding: 12,
-              }}
-            >
-              <div style={{ fontSize: 12, color: colors.textMuted }}>Handelingen</div>
-              <div style={{ fontSize: 24, fontWeight: 700 }}>
-                {result.handelingen ?? 0}
-              </div>
-            </div>
-
-            <div
-              className="card"
-              style={{
-                border: `1px solid ${colors.border}`,
-                background: colors.bgMuted,
-                borderRadius: 10,
-                padding: 12,
-              }}
-            >
-              <div style={{ fontSize: 12, color: colors.textMuted }}>Stappen</div>
-              <div style={{ fontSize: 24, fontWeight: 700 }}>
-                {result.stappen ?? 0}
-              </div>
-            </div>
+            <SummaryCard label="Recepten" value={result.recepten ?? 0} />
+            <SummaryCard label="Handelingen" value={result.handelingen ?? 0} />
+            <SummaryCard label="Stappen" value={result.stappen ?? 0} />
           </div>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function SummaryCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div
+      className="card"
+      style={{
+        border: `1px solid ${colors.border}`,
+        background: colors.bgMuted,
+        borderRadius: 10,
+        padding: 12,
+      }}
+    >
+      <div style={{ fontSize: 12, color: colors.textMuted }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 700 }}>{value}</div>
+    </div>
+  );
+}
+
+function TextInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span style={labelTextStyle}>{label}</span>
+      <input value={value} onChange={(e) => onChange(e.target.value)} style={inputStyle} />
+    </label>
+  );
+}
+
+function IntegerInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span style={labelTextStyle}>{label}</span>
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={inputStyle}
+      />
+    </label>
+  );
+}
+
+function NumberInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span style={labelTextStyle}>{label}</span>
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        style={inputStyle}
+      />
+    </label>
+  );
+}
+
+function HandelingStats({ handeling }: { handeling: RecipeHandeling }) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+        gap: 10,
+        marginBottom: 12,
+      }}
+    >
+      <SmallStat
+        label="Toegelaten venster"
+        value={`${handeling.dag_offset_min} → ${handeling.dag_offset_max}`}
+        subValue={`Voorkeur: ${handeling.dag_offset}`}
+      />
+      <SmallStat label="Actieve tijd" value={`${handeling.actieve_tijd} min`} />
+      <SmallStat label="Passieve tijd" value={`${handeling.passieve_tijd} min`} />
+      <SmallStat label="Totale duur" value={`${handeling.totale_duur} min`} />
+      <SmallStat
+        label="Vast startuur"
+        value={
+          handeling.heeft_vast_startuur
+            ? handeling.vast_startuur || "-"
+            : "Nee"
+        }
+      />
+    </div>
+  );
+}
+
+function SmallStat({
+  label,
+  value,
+  subValue,
+}: {
+  label: string;
+  value: string | number;
+  subValue?: string;
+}) {
+  return (
+    <div
+      style={{
+        padding: 10,
+        borderRadius: 8,
+        background: colors.bgMuted,
+      }}
+    >
+      <div style={{ fontSize: 12, color: colors.textMuted }}>{label}</div>
+      <div style={{ fontWeight: 700 }}>{value}</div>
+      {subValue ? (
+        <div
+          style={{
+            fontSize: 11,
+            color: colors.textMuted,
+            marginTop: 4,
+          }}
+        >
+          {subValue}
+        </div>
+      ) : null}
     </div>
   );
 }
