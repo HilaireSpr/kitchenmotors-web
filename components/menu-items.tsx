@@ -513,7 +513,7 @@ export default function MenuItems() {
           serveerdag: editServeerdag,
           cyclus_week: editCyclusWeek ? Number(editCyclusWeek) : null,
           cyclus_dag: cyclusDag,
-          menu_groep: item.menu_groep,
+          menu_groep: item.menu_groep || item.recept_menu_groep || activeGroup,
           ritme_type: item.ritme_type,
           ritme_interval_weken: item.ritme_interval_weken,
         }),
