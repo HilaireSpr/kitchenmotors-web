@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { colors } from "@/styles/colors";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
@@ -18,6 +18,15 @@ type PlanningRow = {
   "Is vaste taak"?: boolean | null;
   "Toestel conflict"?: boolean | null;
   Stappen?: string | null;
+};
+
+type PlanningRun = {
+  id: number;
+  naam: string;
+  beschrijving?: string | null;
+  aangemaakt_op?: string | null;
+  laatst_gebruikt_op?: string | null;
+  actief?: boolean;
 };
 
 type DayGroup = {
@@ -157,6 +166,8 @@ const sectionTitleStyle = {
 
 export default function PlanningOverview() {
   const [rows, setRows] = useState<PlanningRow[]>([]);
+  const [planningRuns, setPlanningRuns] = useState<PlanningRun[]>([]);
+  const [selectedPlanningRunId, setSelectedPlanningRunId] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(getCurrentMondayIso());
   const [mode, setMode] = useState<OverviewMode>("day");
@@ -166,6 +177,69 @@ export default function PlanningOverview() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isDraggingTask, setIsDraggingTask] = useState(false);
   const [dragOverDay, setDragOverDay] = useState<string | null>(null);
+
+  const loadPlanningRuns = async () => {
+  try {
+    const res = await fetch(`${API_URL}/api/v1/planning/runs`);
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+
+    const json = await res.json();
+    const runs: PlanningRun[] = json?.result || [];
+
+    console.log("PLANNING RUNS UIT BACKEND:", runs);
+
+    setPlanningRuns(runs);
+
+    const activeRun = runs.find((run) => run.actief) || runs[0];
+
+    if (activeRun) {
+      setSelectedPlanningRunId(String(activeRun.id));
+      await loadPlanningRunRows(String(activeRun.id));
+    }
+  } catch (error) {
+    console.error("Fout bij ophalen planningen:", error);
+    setPlanningRuns([]);
+    setSelectedPlanningRunId("");
+    setRows([]);
+  }
+};
+
+useEffect(() => {
+  loadPlanningRuns();
+}, []);
+
+  const loadPlanningRunRows = async (planningRunId: string) => {
+    if (!planningRunId) return;
+
+    try {
+      setLoading(true);
+
+      const res = await fetch(`${API_URL}/api/v1/planning/runs/${planningRunId}`);
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`HTTP ${res.status}: ${text}`);
+      }
+
+      const json = await res.json();
+
+      setRows(json?.result?.rows || []);
+      setSelectedPost("");
+      setExpandedTaskIds([]);
+      setSelectedTaskId(null);
+      setDragOverDay(null);
+      setIsDraggingTask(false);
+    } catch (error) {
+      console.error("Fout bij laden planning rows:", error);
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const runPlanning = async () => {
     try {
@@ -500,6 +574,26 @@ export default function PlanningOverview() {
             gap: 14,
           }}
         >
+          <label style={labelStyle}>
+            Planning
+            <select
+              value={selectedPlanningRunId}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSelectedPlanningRunId(value);
+                loadPlanningRunRows(value);
+              }}
+              style={inputStyle}
+            >
+              <option value="">Kies een planning</option>
+              {planningRuns.map((run) => (
+                <option key={run.id} value={String(run.id)}>
+                  {run.naam}
+                  {run.actief ? " — actief" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
           <label style={labelStyle}>
             Datum
             <input
