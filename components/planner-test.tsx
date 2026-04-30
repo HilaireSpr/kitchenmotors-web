@@ -258,7 +258,7 @@ export default function PlannerTest() {
   >("planning");
   const [startMonday, setStartMonday] = useState(getNextMondayIso());
   const [startWeek, setStartWeek] = useState(1);
-  const [cycles, setCycles] = useState(1);
+  const [endDate, setEndDate] = useState("");
   const [planningName, setPlanningName] = useState("");
   const [menuGroups, setMenuGroups] = useState<string[]>([]);
   const [planningStarturen, setPlanningStarturen] = useState<PlanningStartuurRow[]>([]);
@@ -420,7 +420,7 @@ export default function PlannerTest() {
         body: JSON.stringify({
           start_monday: startMonday,
           start_week: startWeek,
-          cycles,
+          end_date: endDate || null,
           planning_naam: planningName || null,
           explain: true,
           menu_groep: selectedMenuGroup === "all" ? null : selectedMenuGroup,
@@ -889,13 +889,13 @@ export default function PlannerTest() {
           </div>
 
           <div>
-            <div style={labelStyle}>Cycli</div>
+            <div style={labelStyle}>Einddatum</div>
             <input
               style={inputStyle}
-              type="number"
-              min={1}
-              value={cycles}
-              onChange={(e) => setCycles(Number(e.target.value))}
+              type="date"
+              min={startMonday}
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
             />
           </div>
         </div>
