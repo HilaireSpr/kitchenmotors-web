@@ -259,6 +259,7 @@ export default function PlannerTest() {
   const [startMonday, setStartMonday] = useState(getNextMondayIso());
   const [startWeek, setStartWeek] = useState(1);
   const [cycles, setCycles] = useState(1);
+  const [planningName, setPlanningName] = useState("");
   const [menuGroups, setMenuGroups] = useState<string[]>([]);
   const [planningStarturen, setPlanningStarturen] = useState<PlanningStartuurRow[]>([]);
   const [savingStartuurKey, setSavingStartuurKey] = useState<string | null>(null);
@@ -420,6 +421,7 @@ export default function PlannerTest() {
           start_monday: startMonday,
           start_week: startWeek,
           cycles,
+          planning_naam: planningName || null,
           explain: true,
           menu_groep: selectedMenuGroup === "all" ? null : selectedMenuGroup,
         }),
@@ -839,42 +841,19 @@ export default function PlannerTest() {
         >
           <div>
             <div style={labelStyle}>Menu-groep</div>
-
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <select
-                style={inputStyle}
-                value={selectedMenuGroup}
-                onChange={(e) => setSelectedMenuGroup(e.target.value)}
-                onFocus={loadMenuGroups}
-              >
-                <option value="all">Alle menu-groepen</option>
-                {menuGroups.map((groep) => (
-                  <option key={groep} value={groep}>
-                    {groep}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                type="button"
-                onClick={() => {
-                  loadMenuGroups();
-                  loadPlanningStarturen();
-                  loadPostColors();
-                }}
-                style={{
-                  background: colors.bg,
-                  color: colors.text,
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: 12,
-                  padding: "10px 14px",
-                  fontWeight: 600,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Ververs
-              </button>
-            </div>
+            <select
+              style={inputStyle}
+              value={selectedMenuGroup}
+              onChange={(e) => setSelectedMenuGroup(e.target.value)}
+            >
+              onFocus={loadMenuGroups}
+              <option value="all">Alle menu-groepen</option>
+              {menuGroups.map((groep) => (
+                <option key={groep} value={groep}>
+                  {groep}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -885,6 +864,16 @@ export default function PlannerTest() {
               min={getTodayIso()}
               value={startMonday}
               onChange={(e) => setStartMonday(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <div style={labelStyle}>Planning naam</div>
+            <input
+              style={inputStyle}
+              value={planningName}
+              onChange={(e) => setPlanningName(e.target.value)}
+              placeholder="Bijv. Zomerplanning 2026"
             />
           </div>
 
