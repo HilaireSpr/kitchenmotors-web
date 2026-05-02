@@ -240,6 +240,39 @@ const pillStyle = {
   fontWeight: 700,
 };
 
+const compactStatsGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(104px, max-content))",
+  gap: 8,
+  alignItems: "start",
+};
+
+const compactStatCardStyle = {
+  border: `1px solid ${colors.border}`,
+  borderRadius: 12,
+  background: colors.bgMuted,
+  padding: "8px 10px",
+  minWidth: 104,
+  maxWidth: 170,
+};
+
+const compactStatLabelStyle = {
+  fontSize: 10,
+  color: colors.textMuted,
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.04em",
+  fontWeight: 700,
+  whiteSpace: "nowrap" as const,
+};
+
+const compactStatValueStyle = {
+  marginTop: 4,
+  fontSize: 20,
+  fontWeight: 800,
+  color: colors.text,
+  lineHeight: 1,
+};
+
 export default function PlannerTest() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<PlannerResponse | null>(null);
@@ -292,7 +325,7 @@ export default function PlannerTest() {
   useEffect(() => {
     loadMenuGroups();
     loadPlanningStarturen();
-    loadPostColors(); // 👈 toevoegen
+    loadPostColors();
   }, []);
 
   async function loadPlanningStarturen() {
@@ -327,7 +360,7 @@ export default function PlannerTest() {
       const map: Record<string, string> = {};
 
       (json.result || []).forEach((p: any) => {
-        map[p.naam] = p.kleur || "#dbeafe"; // fallback
+        map[p.naam] = p.kleur || "#dbeafe";
       });
 
       setPostColors(map);
@@ -392,6 +425,7 @@ export default function PlannerTest() {
       )
     );
   }
+
   async function runPlanner() {
     if (!startMonday) {
       setError("Kies eerst een startdatum.");
@@ -518,7 +552,7 @@ export default function PlannerTest() {
         throw new Error(`Reset mislukt: ${text}`);
       }
 
-      await runPlanner(); // 👈 belangrijk
+      await runPlanner();
     } catch (err) {
       console.error(err);
     }
@@ -575,20 +609,20 @@ export default function PlannerTest() {
           planning_id: planningId,
           move_after_planning_id: targetPlanningId,
         }),
-    });
+      });
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`HTTP ${res.status}: ${text}`);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`HTTP ${res.status}: ${text}`);
+      }
+
+      await runPlanner();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kon taakvolgorde niet bewaren");
+    } finally {
+      setLoading(false);
     }
-
-    await runPlanner();
-  } catch (err) {
-    setError(err instanceof Error ? err.message : "Kon taakvolgorde niet bewaren");
-  } finally {
-    setLoading(false);
   }
-}
 
   async function handleMoveTaskToDay(planningId: string, targetWerkdagIso: string) {
     const row = previewRows.find((item) => item["Planning ID"] === planningId);
@@ -939,7 +973,7 @@ export default function PlannerTest() {
           padding: 18,
           display: "flex",
           flexDirection: "column",
-          gap: 16,
+          gap: 14,
         }}
       >
         <div
@@ -1049,95 +1083,28 @@ export default function PlannerTest() {
         </div>
 
         {data ? (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-              gap: 12,
-            }}
-          >
+          <div style={compactStatsGridStyle}>
             {statCards.map((card) => (
-              <div
-                key={card.label}
-                style={{
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: 16,
-                  background: colors.bgMuted,
-                  padding: 14,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: colors.textMuted,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                    fontWeight: 700,
-                  }}
-                >
-                  {card.label}
-                </div>
-                <div
-                  style={{
-                    marginTop: 8,
-                    fontSize: 26,
-                    fontWeight: 800,
-                    color: colors.text,
-                    lineHeight: 1,
-                  }}
-                >
-                  {card.value}
-                </div>
+              <div key={card.label} style={compactStatCardStyle}>
+                <div style={compactStatLabelStyle}>{card.label}</div>
+                <div style={compactStatValueStyle}>{card.value}</div>
               </div>
             ))}
           </div>
         ) : null}
 
         {data?.result.debug_counts ? (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-              gap: 12,
-            }}
-          >
+          <div style={compactStatsGridStyle}>
             {Object.entries(data.result.debug_counts).map(([key, value]) => (
-              <div
-                key={key}
-                style={{
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: 16,
-                  background: colors.bg,
-                  padding: 14,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: colors.textMuted,
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  {key}
-                </div>
-                <div
-                  style={{
-                    marginTop: 8,
-                    fontSize: 24,
-                    fontWeight: 800,
-                    color: colors.text,
-                  }}
-                >
-                  {value}
-                </div>
+              <div key={key} style={compactStatCardStyle}>
+                <div style={compactStatLabelStyle}>{key}</div>
+                <div style={compactStatValueStyle}>{value}</div>
               </div>
             ))}
           </div>
         ) : null}
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 2 }}>
           {[
             { key: "planning", label: "Planning" },
             { key: "starturen", label: "Starturen" },
@@ -1200,7 +1167,7 @@ export default function PlannerTest() {
                     applyPostOverride(planningId, targetPost);
                   }}
                   onMoveTaskToDay={handleMoveTaskToDay}
-                  onMoveTaskAfterTask={(planningId, targetPlanningId) => {
+                  onMoveTaskAfterTask={async (planningId, targetPlanningId) => {
                     const row = previewRows.find((item) => item["Planning ID"] === planningId);
                     const targetRow = previewRows.find(
                       (item) => item["Planning ID"] === targetPlanningId
@@ -1209,10 +1176,13 @@ export default function PlannerTest() {
                     if (!row || !targetRow) return;
                     if (row.Locked === true) return;
                     if (targetRow.Locked === true) return;
-                    if (row.Post !== targetRow.Post) return;
                     if (row.Werkdag_iso !== targetRow.Werkdag_iso) return;
 
-                    applyTaskReorder(planningId, targetPlanningId);
+                    if (row.Post !== targetRow.Post && targetRow.Post) {
+                      await applyPostOverride(planningId, targetRow.Post);
+                    }
+
+                    await applyTaskReorder(planningId, targetPlanningId);
                   }}
                 />
 
@@ -1233,7 +1203,6 @@ export default function PlannerTest() {
                       zIndex: 2000,
                     }}
                   >
-                    {/* LOCK / UNLOCK */}
                     <button
                       className="button"
                       onClick={() => {
@@ -1245,10 +1214,13 @@ export default function PlannerTest() {
                         setTaskLock(selectedPlanningId, !row.Locked);
                       }}
                     >
-                      🔒 {previewRows.find(r => r["Planning ID"] === selectedPlanningId)?.Locked ? "Unlock" : "Lock"}
+                      🔒{" "}
+                      {previewRows.find((r) => r["Planning ID"] === selectedPlanningId)
+                        ?.Locked
+                        ? "Unlock"
+                        : "Lock"}
                     </button>
 
-                    {/* RESET */}
                     <button
                       className="button"
                       onClick={() => {
@@ -1258,11 +1230,7 @@ export default function PlannerTest() {
                       ♻ Reset
                     </button>
 
-                    {/* CLOSE */}
-                    <button
-                      className="button"
-                      onClick={() => setSelectedPlanningId(null)}
-                    >
+                    <button className="button" onClick={() => setSelectedPlanningId(null)}>
                       ✕
                     </button>
                   </div>
@@ -1599,8 +1567,8 @@ export default function PlannerTest() {
                             <div
                               style={{
                                 display: "grid",
-                                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-                                gap: 10,
+                                gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+                                gap: 8,
                               }}
                             >
                               {[
@@ -1613,25 +1581,29 @@ export default function PlannerTest() {
                                   key={label}
                                   style={{
                                     border: `1px solid ${colors.border}`,
-                                    borderRadius: 14,
+                                    borderRadius: 10,
                                     background: colors.bg,
-                                    padding: 12,
+                                    padding: "8px 10px",
                                   }}
                                 >
                                   <div
                                     style={{
-                                      fontSize: 12,
+                                      fontSize: 10,
                                       color: colors.textMuted,
-                                      fontWeight: 700,
+                                      fontWeight: 600,
+                                      textTransform: "uppercase",
+                                      letterSpacing: 0.4,
                                     }}
                                   >
                                     {label}
                                   </div>
+
                                   <div
                                     style={{
-                                      marginTop: 4,
-                                      fontWeight: 800,
+                                      marginTop: 2,
+                                      fontWeight: 700,
                                       color: colors.text,
+                                      fontSize: 18,
                                     }}
                                   >
                                     {value}
@@ -1651,29 +1623,30 @@ export default function PlannerTest() {
                               key={label}
                               style={{
                                 border: `1px solid ${colors.border}`,
-                                borderRadius: 16,
+                                borderRadius: 10,
                                 background: colors.bg,
-                                padding: 14,
+                                padding: "8px 10px",
                               }}
                             >
                               <div
                                 style={{
-                                  fontSize: 12,
+                                  fontSize: 10,
                                   color: colors.textMuted,
-                                  fontWeight: 700,
+                                  fontWeight: 600,
                                   textTransform: "uppercase",
                                   letterSpacing: "0.04em",
+                                  opacity: 0.7,
                                 }}
                               >
                                 {label}
                               </div>
                               <div
                                 style={{
-                                  marginTop: 6,
+                                  marginTop: 4,
                                   whiteSpace: "pre-wrap",
                                   wordBreak: "break-word",
-                                  fontSize: 13,
-                                  lineHeight: 1.6,
+                                  fontSize: 12,
+                                  lineHeight: 1.4,
                                   color: colors.text,
                                   fontWeight: 500,
                                 }}
@@ -1750,7 +1723,7 @@ export default function PlannerTest() {
 
                         return (
                           <tr
-                            key={row["Planning ID"] ?? Math.random()}
+                            key={row["Planning ID"] ?? `${row.Werkdag_iso}-${row.Post}-${row.Start}-${row.Taak}`}
                             onClick={() =>
                               setSelectedPlanningId((prev) =>
                                 prev === row["Planning ID"] ? null : (row["Planning ID"] as string)
