@@ -339,16 +339,28 @@ export default function MenuItems() {
     );
   }
 
-  function resetMenuItemForm() {
+  function resetMenuItemForm(keepMenuGroep = true) {
+    const huidigeMenuGroep = gekozenMenuGroep;
+
     setSelectedRecipeId("");
     setServeerdag("");
     setHerhalingType("single");
     setCustomDagen([]);
     setCyclusType("none");
     setCyclusWeek("");
-    setSelectedMenuGroep("");
-    setIsNieuweMenuGroep(false);
-    setNieuweMenuGroep("");
+
+    if (!keepMenuGroep) {
+      setSelectedMenuGroep("");
+      setIsNieuweMenuGroep(false);
+      setNieuweMenuGroep("");
+      return;
+    }
+
+    if (huidigeMenuGroep) {
+      setSelectedMenuGroep(huidigeMenuGroep);
+      setIsNieuweMenuGroep(false);
+      setNieuweMenuGroep("");
+    }
   }
 
   function toggleCustomDag(dag: string) {

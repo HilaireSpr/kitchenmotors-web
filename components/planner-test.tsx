@@ -280,7 +280,12 @@ export default function PlannerTest() {
 
   const [selectedWorkday, setSelectedWorkday] = useState("all");
   const [selectedPost, setSelectedPost] = useState("all");
-  const [selectedMenuGroup, setSelectedMenuGroup] = useState("all");
+  const [selectedMenuGroup, setSelectedMenuGroup] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("selectedMenuGroup") || "all";
+    }
+    return "all";
+  });
   const [showOnlyConflicts, setShowOnlyConflicts] = useState(false);
   const [selectedPlanningId, setSelectedPlanningId] = useState<string | null>(null);
   const [groupBy, setGroupBy] = useState<"post" | "toestel">("post");
@@ -878,10 +883,19 @@ export default function PlannerTest() {
             <select
               style={inputStyle}
               value={selectedMenuGroup}
-              onChange={(e) => setSelectedMenuGroup(e.target.value)}
               onFocus={loadMenuGroups}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSelectedMenuGroup(value);
+
+                // 💾 bewaren in localStorage
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("selectedMenuGroup", value);
+                }
+              }}
             >
               <option value="all">Alle menu-groepen</option>
+
               {menuGroups.map((groep) => (
                 <option key={groep} value={groep}>
                   {groep}
