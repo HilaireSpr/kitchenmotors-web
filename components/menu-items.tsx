@@ -241,6 +241,19 @@ export default function MenuItems() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    const saved = localStorage.getItem("menuGroep");
+    if (saved) {
+      setSelectedMenuGroep(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedMenuGroep) {
+      localStorage.setItem("menuGroep", selectedMenuGroep);
+    }
+  }, [selectedMenuGroep]);
+  
   const bestaandeMenuGroepen = useMemo(() => {
     return Array.from(
       new Set(
