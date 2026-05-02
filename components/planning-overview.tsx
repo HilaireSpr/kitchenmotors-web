@@ -130,10 +130,10 @@ function getAroundDayWindow(centerIso: string) {
 }
 
 const cardStyle = {
-  border: `1px solid ${colors.border}`,
+  border: `1px solid ${colors.primaryLight}`,
   background: colors.bg,
   borderRadius: 20,
-  boxShadow: "0 10px 30px rgba(17, 17, 17, 0.04)",
+  boxShadow: "0 8px 20px rgba(255, 192, 0, 0.15)",
 };
 
 const inputStyle = {
