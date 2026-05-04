@@ -281,6 +281,32 @@ export default function ImportRecipes() {
     setStapForm(createEmptyStapForm());
   }
 
+  async function deleteSelectedRecipe() {
+    if (!recipeDetail?.recept_id) {
+      alert("Geen recept ID gevonden.");
+      return;
+    }
+
+    const ok = window.confirm(
+      "Recept verwijderen? Dit verwijdert ook alle handelingen, stappen en menu-items. Dit kan niet ongedaan worden."
+    );
+
+    if (!ok) return;
+
+    const res = await fetch(`${API_URL}/api/v1/recipes/${recipeDetail.recept_id}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      alert(`Verwijderen mislukt: ${text}`);
+      return;
+    }
+
+    closeRecipeDetail();
+    await loadRecipes();
+  }
+
   async function saveStap(stapId: number) {
     try {
       setSavingStapId(stapId);
@@ -594,18 +620,33 @@ export default function ImportRecipes() {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  className="button"
-                  onClick={closeRecipeDetail}
-                  style={{
-                    background: colors.bgMuted,
-                    color: colors.text,
-                    border: `1px solid ${colors.border}`,
-                  }}
-                >
-                  Sluiten
-                </button>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="button"
+                    onClick={deleteSelectedRecipe}
+                    style={{
+                      background: colors.bg,
+                      color: colors.danger,
+                      border: `1px solid ${colors.danger}`,
+                    }}
+                  >
+                    Verwijderen
+                  </button>
+
+                  <button
+                    type="button"
+                    className="button"
+                    onClick={closeRecipeDetail}
+                    style={{
+                      background: colors.bgMuted,
+                      color: colors.text,
+                      border: `1px solid ${colors.border}`,
+                    }}
+                  >
+                    Sluiten
+                  </button>
+                </div>
               </div>
 
               <div
