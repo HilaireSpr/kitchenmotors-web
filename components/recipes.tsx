@@ -124,6 +124,7 @@ const labelTextStyle = {
 
 export default function ImportRecipes() {
   const [file, setFile] = useState<File | null>(null);
+  const [overwriteExisting, setOverwriteExisting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState("");
@@ -203,10 +204,13 @@ export default function ImportRecipes() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(`${API_URL}/api/v1/import/recipes-excel`, {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetch(
+        `${API_URL}/api/v1/import/recipes-excel?overwrite_existing=${overwriteExisting}`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       if (!res.ok) {
         const text = await res.text();
@@ -1216,6 +1220,23 @@ export default function ImportRecipes() {
               color: colors.text,
             }}
           />
+
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 14,
+              color: colors.text,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={overwriteExisting}
+              onChange={(e) => setOverwriteExisting(e.target.checked)}
+            />
+            Bestaande recepten overschrijven
+          </label>
 
           <button
             className="button"
