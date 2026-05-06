@@ -227,7 +227,17 @@ useEffect(() => {
 
       const json = await res.json();
 
-      setRows(json?.result?.rows || []);
+      const loadedRows = json?.result?.rows || [];
+      setRows(loadedRows);
+
+      const firstWorkday = loadedRows
+        .map((row: PlanningRow) => toIsoDay(row.Werkdag_iso || row.Werkdag))
+        .filter(Boolean)
+        .sort()[0];
+
+      if (firstWorkday) {
+        setSelectedDate(firstWorkday);
+      }
       setSelectedPost("");
       setExpandedTaskIds([]);
       setSelectedTaskId(null);
@@ -674,8 +684,8 @@ useEffect(() => {
 
           <button
             className="button"
-            onClick={runPlanning}
-            disabled={loading}
+            onClick={() => loadPlanningRunRows(selectedPlanningRunId)}
+            disabled={loading || !selectedPlanningRunId}
             style={{
               background: colors.primary,
               color: colors.text,
