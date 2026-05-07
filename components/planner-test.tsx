@@ -94,6 +94,15 @@ type PlanningStartuurRow = {
   starttijd: string;
 };
 
+type PlanningRun = {
+  id: number;
+  naam: string;
+  beschrijving?: string | null;
+  aangemaakt_op?: string | null;
+  laatst_gebruikt_op?: string | null;
+  actief?: boolean;
+};
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 function extractArray<T>(payload: unknown): T[] {
@@ -302,7 +311,91 @@ export default function PlannerTest() {
   const [planningStarturen, setPlanningStarturen] = useState<PlanningStartuurRow[]>([]);
   const [savingStartuurKey, setSavingStartuurKey] = useState<string | null>(null);
   const [postColors, setPostColors] = useState<Record<string, string>>({});
+  const [planningRuns, setPlanningRuns] = useState<PlanningRun[]>([]);
+  const [selectedPlanningRunId, setSelectedPlanningRunId] = useState("");
 
+  async function loadPlanningRuns() {
+    try {
+      const res = await fetch(`${API_URL}/api/v1/planning/runs`);
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Kon planningen niet ophalen");
+      }
+
+      const json = await res.json();
+      setPlanningRuns(json.result ?? []);
+    } catch (err) {
+      console.error("Fout bij laden planningen:", err);
+      setPlanningRuns([]);
+    }
+  }
+
+  async function loadPlanningRunRows(planningRunId: string) {
+    if (!planningRunId) return;
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch(`${API_URL}/api/v1/planning/runs/${planningRunId}`);
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Kon planning niet laden");
+      }
+
+      const json = await res.json();
+
+      setData({
+        success: true,
+        result: {
+          rows: json.result?.rows ?? [],
+          row_count: json.result?.rows?.length ?? 0,
+          capacity_summary: [],
+          conflict_summary: [],
+          conflict_count: 0,
+        },
+      });
+
+      setSelectedPlanningRunId(planningRunId);
+      setSelectedPlanningId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kon planning niet laden");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteSelectedPlanningRun() {
+    if (!selectedPlanningRunId) return;
+
+    const ok = window.confirm("Deze planning verwijderen? Dit kan niet ongedaan worden.");
+    if (!ok) return;
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch(`${API_URL}/api/v1/planning/runs/${selectedPlanningRunId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Kon planning niet verwijderen");
+      }
+
+      setSelectedPlanningRunId("");
+      setData(null);
+      await loadPlanningRuns();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kon planning niet verwijderen");
+    } finally {
+      setLoading(false);
+    }
+  }
+  
   async function loadMenuGroups() {
     try {
       const res = await fetch(`${API_URL}/api/v1/menu/items`);
@@ -329,6 +422,7 @@ export default function PlannerTest() {
 
   useEffect(() => {
     loadMenuGroups();
+    loadPlanningRuns();
     loadPlanningStarturen();
     loadPostColors();
   }, []);
@@ -474,6 +568,14 @@ export default function PlannerTest() {
       const json = await res.json();
       setData(json);
       setSelectedPlanningId(null);
+
+      const newPlanningRunId = json.result?.planning_run_id;
+      await loadPlanningRuns();
+
+      if (newPlanningRunId) {
+        setSelectedPlanningRunId(String(newPlanningRunId));
+      }
+
       await loadPlanningStarturen();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Onbekende fout");
@@ -879,6 +981,26 @@ export default function PlannerTest() {
           }}
         >
           <div>
+            <div style={labelStyle}>Bestaande planning</div>
+            <select
+              style={inputStyle}
+              value={selectedPlanningRunId}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSelectedPlanningRunId(value);
+                loadPlanningRunRows(value);
+              }}
+            >
+              <option value="">Kies een planning</option>
+              {planningRuns.map((run) => (
+                <option key={run.id} value={String(run.id)}>
+                  {run.naam}
+                  {run.actief ? " — actief" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
             <div style={labelStyle}>Menu-groep</div>
             <select
               style={inputStyle}
@@ -973,6 +1095,23 @@ export default function PlannerTest() {
             {loading ? "Planner draait..." : "Run planner"}
           </button>
 
+          <button
+            className="button"
+            onClick={deleteSelectedPlanningRun}
+            disabled={loading || !selectedPlanningRunId}
+            style={{
+              background: colors.bg,
+              color: colors.danger,
+              border: `1px solid ${colors.danger}`,
+              borderRadius: 12,
+              padding: "12px 18px",
+              fontWeight: 700,
+              opacity: loading || !selectedPlanningRunId ? 0.5 : 1,
+            }}
+          >
+            Verwijder gekozen planning
+          </button>
+          
           {!isMonday(startMonday) ? (
             <span style={{ fontSize: 13, color: colors.danger, fontWeight: 600 }}>
               Kies een maandag als startdatum.
