@@ -1369,6 +1369,7 @@ export default function PlannerGantt({
 
       {isFullscreen ? (
         <div
+          className="gantt-fullscreen-print"
           style={{
             position: "fixed",
             overflow: "hidden",
@@ -1488,6 +1489,38 @@ export default function PlannerGantt({
                         >
                           {formatTime(tick)}
                         </div>
+                        <style jsx global>{`
+                          @media print {
+                            body * {
+                              visibility: hidden !important;
+                            }
+
+                            .gantt-fullscreen-print,
+                            .gantt-fullscreen-print * {
+                              visibility: visible !important;
+                            }
+
+                            .gantt-fullscreen-print {
+                              position: absolute !important;
+                              left: 0 !important;
+                              top: 0 !important;
+                              width: max-content !important;
+                              height: auto !important;
+                              overflow: visible !important;
+                              padding: 0 !important;
+                              background: white !important;
+                            }
+
+                            .gantt-fullscreen-print button {
+                              display: none !important;
+                            }
+
+                            @page {
+                              size: A3 landscape;
+                              margin: 8mm;
+                            }
+                          }
+                        `}</style>
                       </div>
                     );
                   })}
