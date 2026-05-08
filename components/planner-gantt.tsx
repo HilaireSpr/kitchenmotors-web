@@ -466,6 +466,8 @@ export default function PlannerGantt({
         background: colors.bg,
         borderRadius: 20,
         padding: 18,
+        maxWidth: "100%",
+        overflow: "hidden",
         boxShadow: "0 10px 30px rgba(17,17,17,0.04)",
         display: "flex",
         flexDirection: "column",
@@ -523,27 +525,47 @@ export default function PlannerGantt({
             Fullscreen Gantt
           </button>
 
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              padding: "6px 10px",
-              borderRadius: 999,
-              background: colors.bgMuted,
-              border: `1px solid ${colors.border}`,
-              fontSize: 12,
-              fontWeight: 700,
-              color: colors.textMuted,
-            }}
-          >
-            {tasks.length} taken
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button
+              onClick={() => setIsFullscreen(true)}
+              style={{
+                padding: "8px 12px",
+                borderRadius: 10,
+                border: `1px solid ${colors.border}`,
+                background: colors.bg,
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              ⛶ Full screen
+            </button>
+
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "6px 10px",
+                borderRadius: 999,
+                background: colors.bgMuted,
+                border: `1px solid ${colors.border}`,
+                fontSize: 12,
+                fontWeight: 700,
+                color: colors.textMuted,
+              }}
+            >
+              {tasks.length} taken
+            </div>
           </div>
         </div>
       </div>
 
       <div
+        onDoubleClick={() => setIsFullscreen(true)}
         style={{
           overflowX: "auto",
+          overflowY: "auto",
+          maxWidth: "100%",
+          maxHeight: "70vh",
           border: `1px solid ${colors.border}`,
           borderRadius: 18,
           background: colors.bg,
@@ -1365,6 +1387,7 @@ export default function PlannerGantt({
         <div
           style={{
             position: "fixed",
+            overflow: "hidden",
             inset: 0,
             zIndex: 5000,
             background: colors.bg,
@@ -1410,6 +1433,7 @@ export default function PlannerGantt({
           <div
             style={{
               flex: 1,
+              minHeight: 0,
               overflow: "auto",
               border: `1px solid ${colors.border}`,
               borderRadius: 16,
