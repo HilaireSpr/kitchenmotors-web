@@ -508,25 +508,9 @@ export default function PlannerGantt({
         </div>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <button
-            type="button"
-            className="button"
-            onClick={() => setIsFullscreen(true)}
-            style={{
-              background: colors.primary,
-              color: colors.text,
-              border: "none",
-              borderRadius: 12,
-              padding: "8px 12px",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            Fullscreen Gantt
-          </button>
-
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <button
+              type="button"
               onClick={() => setIsFullscreen(true)}
               style={{
                 padding: "8px 12px",
@@ -1427,6 +1411,23 @@ export default function PlannerGantt({
               }}
             >
               Sluiten
+            </button>
+
+            <button
+              type="button"
+              className="button"
+              onClick={() => window.print()}
+              style={{
+                background: colors.primary,
+                color: colors.text,
+                border: "none",
+                borderRadius: 12,
+                padding: "10px 14px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Print Gantt
             </button>
           </div>
 
