@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { colors } from "@/styles/colors";
 
 export type PlannerRow = {
@@ -366,6 +366,20 @@ export default function PlannerGantt({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOverPost, setDragOverPost] = useState<string | null>(null);
   const [dragOverDay, setDragOverDay] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsFullscreen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isFullscreen]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, GanttTask[]>();
@@ -491,20 +505,39 @@ export default function PlannerGantt({
           </p>
         </div>
 
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            padding: "6px 10px",
-            borderRadius: 999,
-            background: colors.bgMuted,
-            border: `1px solid ${colors.border}`,
-            fontSize: 12,
-            fontWeight: 700,
-            color: colors.textMuted,
-          }}
-        >
-          {tasks.length} taken
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="button"
+            onClick={() => setIsFullscreen(true)}
+            style={{
+              background: colors.primary,
+              color: colors.text,
+              border: "none",
+              borderRadius: 12,
+              padding: "8px 12px",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Fullscreen Gantt
+          </button>
+
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "6px 10px",
+              borderRadius: 999,
+              background: colors.bgMuted,
+              border: `1px solid ${colors.border}`,
+              fontSize: 12,
+              fontWeight: 700,
+              color: colors.textMuted,
+            }}
+          >
+            {tasks.length} taken
+          </div>
         </div>
       </div>
 
@@ -1323,6 +1356,283 @@ export default function PlannerGantt({
               ) : (
                 <span style={{ color: colors.textMuted }}>Geen taken</span>
               )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isFullscreen ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 5000,
+            background: colors.bg,
+            padding: 20,
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <div>
+              <h2 style={{ margin: 0 }}>Fullscreen Gantt</h2>
+              <p style={{ margin: "6px 0 0 0", color: colors.textMuted }}>
+                Compact overzicht per post, taak en tijdlijn.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="button"
+              onClick={() => setIsFullscreen(false)}
+              style={{
+                background: colors.bgMuted,
+                color: colors.text,
+                border: `1px solid ${colors.border}`,
+                borderRadius: 12,
+                padding: "10px 14px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Sluiten
+            </button>
+          </div>
+
+          <div
+            style={{
+              flex: 1,
+              overflow: "auto",
+              border: `1px solid ${colors.border}`,
+              borderRadius: 16,
+              background: colors.bg,
+            }}
+          >
+            <div style={{ width: 340 + timelineWidth }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: `120px 220px ${timelineWidth}px`,
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 20,
+                  background: colors.bgMuted,
+                  borderBottom: `1px solid ${colors.border}`,
+                  minHeight: 54,
+                }}
+              >
+                <div style={{ padding: 12, fontWeight: 800, borderRight: `1px solid ${colors.border}` }}>
+                  Post
+                </div>
+                <div style={{ padding: 12, fontWeight: 800, borderRight: `1px solid ${colors.border}` }}>
+                  Taak
+                </div>
+
+                <div style={{ position: "relative" }}>
+                  {hourTicks.map((tick) => {
+                    const left =
+                      ((tick.getTime() - bounds.start.getTime()) / (1000 * 60 * 60)) *
+                      PX_PER_HOUR;
+
+                    return (
+                      <div
+                        key={`fullscreen-hour-${tick.toISOString()}`}
+                        style={{
+                          position: "absolute",
+                          left,
+                          top: 0,
+                          height: "100%",
+                          borderLeft: `1px solid ${colors.border}`,
+                        }}
+                      >
+                        <div
+                          style={{
+                            padding: "18px 8px 8px 8px",
+                            fontSize: 11,
+                            color: colors.textMuted,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {formatTime(tick)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {[...tasks]
+                .sort((a, b) => {
+                  const postCompare = a.post.localeCompare(b.post);
+                  if (postCompare !== 0) return postCompare;
+                  return a.start.getTime() - b.start.getTime();
+                })
+                .map((task, index) => {
+                  const minutesFromStart =
+                    (task.start.getTime() - bounds.start.getTime()) / 60000;
+
+                  const durationMinutes = Math.max(
+                    15,
+                    (task.end.getTime() - task.start.getTime()) / 60000
+                  );
+
+                  const left = (minutesFromStart / 60) * PX_PER_HOUR;
+                  const width = (durationMinutes / 60) * PX_PER_HOUR;
+                  const isSelected = selectedPlanningId === task.planningId;
+
+                  const activeColor = getTaskActiveColor(task, isSelected, false, postColors);
+                  const passiveColor = getTaskPassiveColor(task, isSelected, false, postColors);
+
+                  const activeFlex =
+                    task.activeMinutes > 0
+                      ? task.activeMinutes
+                      : Math.max(1, getTaskDurationMinutes(task) - task.passiveMinutes);
+
+                  const passiveFlex = task.passiveMinutes;
+
+                  return (
+                    <div
+                      key={`fullscreen-${task.planningId}-${index}`}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: `120px 220px ${timelineWidth}px`,
+                        minHeight: 44,
+                        borderBottom: "1px solid #f1f1f1",
+                      }}
+                    >
+                      <div
+                        style={{
+                          padding: "10px 12px",
+                          borderRight: `1px solid ${colors.border}`,
+                          fontWeight: 800,
+                          background: colors.bgMuted,
+                          color: colors.text,
+                          position: "sticky",
+                          left: 0,
+                          zIndex: 10,
+                        }}
+                      >
+                        {task.post}
+                      </div>
+
+                      <div
+                        style={{
+                          padding: "10px 12px",
+                          borderRight: `1px solid ${colors.border}`,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: colors.text,
+                          background: colors.bg,
+                          position: "sticky",
+                          left: 120,
+                          zIndex: 10,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                        title={task.label}
+                      >
+                        {task.label}
+                      </div>
+
+                      <div style={{ position: "relative", minHeight: 44 }}>
+                        {hourTicks.map((tick) => {
+                          const tickLeft =
+                            ((tick.getTime() - bounds.start.getTime()) / (1000 * 60 * 60)) *
+                            PX_PER_HOUR;
+
+                          return (
+                            <div
+                              key={`fullscreen-grid-${task.planningId}-${tick.toISOString()}`}
+                              style={{
+                                position: "absolute",
+                                left: tickLeft,
+                                top: 0,
+                                height: "100%",
+                                borderLeft: "1px solid #f4f4f4",
+                              }}
+                            />
+                          );
+                        })}
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onSelectPlanningId?.(isSelected ? null : task.planningId)
+                          }
+                          onMouseEnter={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setHoveredTask({
+                              task,
+                              isOverridden: false,
+                              x: rect.left,
+                              y: rect.top,
+                            });
+                          }}
+                          onMouseLeave={() => setHoveredTask(null)}
+                          style={{
+                            position: "absolute",
+                            left,
+                            top: 5,
+                            width: Math.max(width, 92),
+                            height: 34,
+                            borderRadius: 10,
+                            border: getTaskBorder(task, isSelected, false, "ok"),
+                            background: "transparent",
+                            color: getTaskTextColor(task, false),
+                            padding: "5px 8px",
+                            textAlign: "left",
+                            cursor: "pointer",
+                            boxShadow: isSelected
+                              ? "0 0 0 3px rgba(255,192,0,0.6)"
+                              : "0 2px 6px rgba(0,0,0,0.08)",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              position: "absolute",
+                              inset: 0,
+                              display: "flex",
+                              zIndex: 0,
+                            }}
+                          >
+                            <div style={{ flex: activeFlex, background: activeColor }} />
+                            {passiveFlex > 0 ? (
+                              <div
+                                style={{
+                                  flex: passiveFlex,
+                                  background: passiveColor,
+                                  borderLeft: `1px dashed ${colors.border}`,
+                                }}
+                              />
+                            ) : null}
+                          </div>
+
+                          <div
+                            style={{
+                              position: "relative",
+                              zIndex: 1,
+                              fontSize: 10,
+                              fontWeight: 800,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {formatTime(task.start)} - {formatTime(task.end)} · {task.label}
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </div>
