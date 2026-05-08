@@ -389,6 +389,7 @@ export default function PlannerTest() {
       setSelectedPlanningRunId("");
       setData(null);
       await loadPlanningRuns();
+      window.dispatchEvent(new Event("planning-runs-changed"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kon planning niet verwijderen");
     } finally {
@@ -571,6 +572,7 @@ export default function PlannerTest() {
 
       const newPlanningRunId = json.result?.planning_run_id;
       await loadPlanningRuns();
+      window.dispatchEvent(new Event("planning-runs-changed"));
 
       if (newPlanningRunId) {
         setSelectedPlanningRunId(String(newPlanningRunId));
@@ -1111,7 +1113,7 @@ export default function PlannerTest() {
           >
             Verwijder gekozen planning
           </button>
-          
+
           {!isMonday(startMonday) ? (
             <span style={{ fontSize: 13, color: colors.danger, fontWeight: 600 }}>
               Kies een maandag als startdatum.

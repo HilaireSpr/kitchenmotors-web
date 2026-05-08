@@ -210,6 +210,18 @@ export default function PlanningOverview() {
 
 useEffect(() => {
   loadPlanningRuns();
+
+  const handlePlanningRunsChanged = () => {
+    loadPlanningRuns();
+  };
+
+  window.addEventListener("planning-runs-changed", handlePlanningRunsChanged);
+  window.addEventListener("focus", handlePlanningRunsChanged);
+
+  return () => {
+    window.removeEventListener("planning-runs-changed", handlePlanningRunsChanged);
+    window.removeEventListener("focus", handlePlanningRunsChanged);
+  };
 }, []);
 
   const loadPlanningRunRows = async (planningRunId: string) => {
