@@ -1370,17 +1370,20 @@ export default function PlannerGantt({
       {isFullscreen ? (
         <div
           className="gantt-fullscreen-print"
-          style={{
-            position: "fixed",
-            overflow: "hidden",
-            inset: 0,
-            zIndex: 5000,
-            background: colors.bg,
-            padding: 20,
-            display: "flex",
-            flexDirection: "column",
-            gap: 14,
-          }}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 5000,
+              background: colors.bg,
+              padding: 20,
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+              overflow: "hidden",
+              width: "100vw",
+              height: "100vh",
+              boxSizing: "border-box",
+            }}
         >
           <div
             style={{
@@ -1433,11 +1436,14 @@ export default function PlannerGantt({
                 Print Gantt
               </button>
             </div>
+          </div>
 
           <div
             style={{
               flex: 1,
               minHeight: 0,
+              width: "100%",
+              maxWidth: "100%",
               overflow: "auto",
               border: `1px solid ${colors.border}`,
               borderRadius: 16,
@@ -1495,6 +1501,12 @@ export default function PlannerGantt({
                           @media print {
                             body * {
                               visibility: hidden !important;
+                            }
+
+                            .gantt-fullscreen-print,
+                            .gantt-fullscreen-print * {
+                              -webkit-print-color-adjust: exact !important;
+                              print-color-adjust: exact !important;
                             }
 
                             .gantt-fullscreen-print,
@@ -1696,8 +1708,7 @@ export default function PlannerGantt({
             </div>
           </div>
         </div>
-      </div>
-    ) : null}
+      ) : null}
 
       <div
         style={{
