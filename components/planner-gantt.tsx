@@ -1397,40 +1397,42 @@ export default function PlannerGantt({
               </p>
             </div>
 
-            <button
-              type="button"
-              className="button"
-              onClick={() => setIsFullscreen(false)}
-              style={{
-                background: colors.bgMuted,
-                color: colors.text,
-                border: `1px solid ${colors.border}`,
-                borderRadius: 12,
-                padding: "10px 14px",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
+            <div
+              className="gantt-print-controls"
+              style={{ display: "flex", gap: 8 }}
             >
-              Sluiten
-            </button>
+              <button
+                type="button"
+                onClick={() => setIsFullscreen(false)}
+                style={{
+                  background: colors.bgMuted,
+                  color: colors.text,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Sluiten
+              </button>
 
-            <button
-              type="button"
-              className="button"
-              onClick={() => window.print()}
-              style={{
-                background: colors.primary,
-                color: colors.text,
-                border: "none",
-                borderRadius: 12,
-                padding: "10px 14px",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              Print Gantt
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                style={{
+                  background: colors.primary,
+                  color: colors.text,
+                  border: "none",
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Print Gantt
+              </button>
+            </div>
 
           <div
             style={{
@@ -1500,6 +1502,10 @@ export default function PlannerGantt({
                               visibility: visible !important;
                             }
 
+                            .gantt-print-controls {
+                              display: none !important;
+                            }
+
                             .gantt-fullscreen-print {
                               position: absolute !important;
                               left: 0 !important;
@@ -1509,10 +1515,6 @@ export default function PlannerGantt({
                               overflow: visible !important;
                               padding: 0 !important;
                               background: white !important;
-                            }
-
-                            .gantt-fullscreen-print button {
-                              display: none !important;
                             }
 
                             @page {
