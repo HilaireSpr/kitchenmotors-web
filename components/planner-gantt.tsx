@@ -1696,7 +1696,8 @@ export default function PlannerGantt({
             </div>
           </div>
         </div>
-      ) : null}
+      </div>
+    ) : null}
 
       <div
         style={{
