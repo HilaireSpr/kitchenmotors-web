@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { colors } from "@/styles/colors";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -177,7 +177,6 @@ export default function PlanningOverview() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isDraggingTask, setIsDraggingTask] = useState(false);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const loadPlanningRunRows = async (
     planningRunId: string,
@@ -845,24 +844,6 @@ export default function PlanningOverview() {
 
       {groupedDays.length > 0 ? (
         <div
-          ref={scrollContainerRef}
-          onDragOver={(e) => {
-            const container = scrollContainerRef.current;
-            if (!container) return;
-
-            const rect = container.getBoundingClientRect();
-
-            const topZone = rect.top + 120;
-            const bottomZone = rect.bottom - 120;
-
-            const scrollSpeed = 18;
-
-            if (e.clientY < topZone) {
-              container.scrollTop -= scrollSpeed;
-            } else if (e.clientY > bottomZone) {
-              container.scrollTop += scrollSpeed;
-            }
-          }}
           style={{
             overflowX: "auto",
             overflowY: "auto",
