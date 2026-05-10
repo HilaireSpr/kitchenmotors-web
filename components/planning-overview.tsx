@@ -311,7 +311,12 @@ useEffect(() => {
 
     try {
       setLoading(true);
-
+      console.log("MOVE URL:", `${API_URL}/api/v1/planning/override/move`);
+      console.log("MOVE PAYLOAD:", {
+        planning_id: planningId,
+        werkdag_override: targetWorkday,
+        planning_run_id: Number(selectedPlanningRunId),
+      });
       const res = await fetch(`${API_URL}/api/v1/planning/override/move`, {
         method: "POST",
         headers: {
@@ -320,6 +325,7 @@ useEffect(() => {
         body: JSON.stringify({
           planning_id: planningId,
           werkdag_override: targetWorkday,
+          planning_run_id: Number(selectedPlanningRunId),
         }),
       });
 
@@ -328,9 +334,79 @@ useEffect(() => {
         throw new Error(`HTTP ${res.status}: ${text}`);
       }
 
-      await runPlanning();
+      await loadPlanningRunRows(selectedPlanningRunId);
     } catch (error) {
       console.error("Fout bij verplaatsen naar andere dag:", error);
+    } finally {
+      setIsDraggingTask(false);
+      setDragOverDay(null);
+      setLoading(false);
+    }
+  };
+
+  const applyPostOverride = async (planningId: string, targetPost: string) => {
+    if (!targetPost) return;
+    if (!selectedPlanningRunId) return;
+
+    try {
+      setLoading(true);
+
+      const res = await fetch(`${API_URL}/api/v1/planning/override/post`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          planning_id: planningId,
+          post_override: targetPost,
+          planning_run_id: Number(selectedPlanningRunId),
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`HTTP ${res.status}: ${text}`);
+      }
+
+      await loadPlanningRunRows(selectedPlanningRunId);
+    } catch (error) {
+      console.error("Fout bij verplaatsen naar andere post:", error);
+    } finally {
+      setIsDraggingTask(false);
+      setDragOverDay(null);
+      setLoading(false);
+    }
+  };
+
+  const applyTaskReorder = async (planningId: string, targetPlanningId: string) => {
+    if (!planningId) return;
+    if (!targetPlanningId) return;
+    if (!selectedPlanningRunId) return;
+    if (planningId === targetPlanningId) return;
+
+    try {
+      setLoading(true);
+
+      const res = await fetch(`${API_URL}/api/v1/planning/override/reorder`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          planning_id: planningId,
+          move_after_planning_id: targetPlanningId,
+          planning_run_id: Number(selectedPlanningRunId),
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`HTTP ${res.status}: ${text}`);
+      }
+
+      await loadPlanningRunRows(selectedPlanningRunId);
+    } catch (error) {
+      console.error("Fout bij taakvolgorde aanpassen:", error);
     } finally {
       setIsDraggingTask(false);
       setDragOverDay(null);
@@ -803,10 +879,10 @@ useEffect(() => {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: `220px repeat(${groupedDays.length}, minmax(260px, 1fr))`,
-              gap: 14,
+              gridTemplateColumns: `120px repeat(${groupedDays.length}, minmax(220px, 1fr))`,
+              gap: 10,
               alignItems: "start",
-              minWidth: groupedDays.length > 0 ? 220 + groupedDays.length * 280 : undefined,
+              minWidth: groupedDays.length > 0 ? 120 + groupedDays.length * 240 : undefined,
             }}
           >
             <div
@@ -867,7 +943,9 @@ useEffect(() => {
                     left: 0,
                     zIndex: 10,
                     fontWeight: 800,
-                    padding: 14,
+                    padding: "10px 8px",
+                    fontSize: 18,
+                    textAlign: "center",
                     border: `1px solid ${colors.border}`,
                     background: colors.bgMuted,
                     borderRadius: 14,
@@ -908,7 +986,17 @@ useEffect(() => {
 
                         try {
                           const draggedRow = JSON.parse(rawRow) as PlanningRow;
-                          await handleMoveTaskToDay(draggedRow, day.day);
+                          const currentDay = toIsoDay(draggedRow.Werkdag_iso || draggedRow.Werkdag);
+                          const currentPost = draggedRow.Post || "";
+
+                          if (currentDay !== day.day) {
+                            await handleMoveTaskToDay(draggedRow, day.day);
+                          } else if (currentPost !== post) {
+                            const planningId = draggedRow["Planning ID"];
+                            if (planningId) {
+                              await applyPostOverride(planningId, post);
+                            }
+                          };
                         } finally {
                           setDragOverDay(null);
                           setIsDraggingTask(false);
@@ -917,7 +1005,7 @@ useEffect(() => {
                       style={{
                         border: `1px solid ${colors.border}`,
                         borderRadius: 14,
-                        padding: 10,
+                        padding: 7,
                         background:
                           dragOverDay === day.day
                             ? "#fff8de"
@@ -926,10 +1014,10 @@ useEffect(() => {
                             : colors.bg,
                         outline: dragOverDay === day.day ? `2px dashed ${colors.primary}` : "none",
                         outlineOffset: -2,
-                        minHeight: 48,
+                        minHeight: 36,
                         display: "flex",
                         flexDirection: "column",
-                        gap: 8,
+                        gap: 6,
                         transition: "background 120ms ease, outline 120ms ease",
                         boxShadow: "0 6px 16px rgba(17,17,17,0.03)",
                       }}
@@ -970,6 +1058,38 @@ useEffect(() => {
                                 );
                                 e.dataTransfer.effectAllowed = "move";
                               }}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.dataTransfer.dropEffect = "move";
+                              }}
+                              onDrop={async (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+
+                                const rawRow = e.dataTransfer.getData("application/planning-row");
+                                if (!rawRow) return;
+
+                                const draggedRow = JSON.parse(rawRow) as PlanningRow;
+                                const draggedPlanningId = draggedRow["Planning ID"];
+                                const targetPlanningId = row["Planning ID"];
+
+                                if (!draggedPlanningId || !targetPlanningId) return;
+                                if (draggedPlanningId === targetPlanningId) return;
+
+                                const draggedDay = toIsoDay(draggedRow.Werkdag_iso || draggedRow.Werkdag);
+                                const targetDay = toIsoDay(row.Werkdag_iso || row.Werkdag);
+
+                                if (draggedDay !== targetDay) {
+                                  await handleMoveTaskToDay(draggedRow, targetDay || day.day);
+                                  return;
+                                }
+
+                                if ((draggedRow.Post || "") !== (row.Post || "")) {
+                                  await applyPostOverride(draggedPlanningId, row.Post || post);
+                                }
+
+                                await applyTaskReorder(draggedPlanningId, targetPlanningId);
+                              }}
                               onDragEnd={() => {
                                 setIsDraggingTask(false);
                                 setDragOverDay(null);
@@ -982,15 +1102,15 @@ useEffect(() => {
                               style={{
                                 display: "flex",
                                 flexDirection: "column",
-                                gap: 6,
-                                padding: "10px 12px",
-                                borderRadius: 12,
+                                gap: 3,
+                                padding: "7px 9px",
+                                borderRadius: 10,
                                 background:
                                   selectedTaskId === taskId
                                     ? colors.selectedBg
                                     : getRowBackground(row),
                                 border: getRowBorder(row),
-                                fontSize: 12,
+                                fontSize: 11,
                                 cursor: row.Locked === true ? "not-allowed" : "grab",
                                 opacity: isDraggingTask && selectedTaskId === taskId ? 0.7 : 1,
                                 boxShadow:
@@ -1082,7 +1202,8 @@ useEffect(() => {
                                 style={{
                                   fontWeight: 800,
                                   color: colors.text,
-                                  lineHeight: 1.35,
+                                  lineHeight: 1.2,
+                                  fontSize: 12,
                                 }}
                               >
                                 {row.Taak || "Onbekend"}
@@ -1091,9 +1212,12 @@ useEffect(() => {
                               {row.Recept ? (
                                 <div
                                   style={{
-                                    fontSize: 11,
+                                    fontSize: 10,
                                     color: colors.textMuted,
-                                    lineHeight: 1.4,
+                                    lineHeight: 1.2,
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
                                   }}
                                 >
                                   {row.Recept}
