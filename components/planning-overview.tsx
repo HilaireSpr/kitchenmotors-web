@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { colors } from "@/styles/colors";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 type PlanningRow = {
   "Planning ID"?: string | null;
@@ -176,55 +176,12 @@ export default function PlanningOverview() {
   const [expandedTaskIds, setExpandedTaskIds] = useState<string[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isDraggingTask, setIsDraggingTask] = useState(false);
-  const [dragOverDay, setDragOverDay] = useState<string | null>(null);
+  const [dragOverCell, setDragOverCell] = useState<string | null>(null);
 
-  const loadPlanningRuns = async () => {
-  try {
-    const res = await fetch(`${API_URL}/api/v1/planning/runs`);
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`HTTP ${res.status}: ${text}`);
-    }
-
-    const json = await res.json();
-    const runs: PlanningRun[] = json?.result || [];
-
-    console.log("PLANNING RUNS UIT BACKEND:", runs);
-
-    setPlanningRuns(runs);
-
-    const activeRun = runs.find((run) => run.actief) || runs[0];
-
-    if (activeRun) {
-      setSelectedPlanningRunId(String(activeRun.id));
-      await loadPlanningRunRows(String(activeRun.id));
-    }
-  } catch (error) {
-    console.error("Fout bij ophalen planningen:", error);
-    setPlanningRuns([]);
-    setSelectedPlanningRunId("");
-    setRows([]);
-  }
-};
-
-useEffect(() => {
-  loadPlanningRuns();
-
-  const handlePlanningRunsChanged = () => {
-    loadPlanningRuns();
-  };
-
-  window.addEventListener("planning-runs-changed", handlePlanningRunsChanged);
-  window.addEventListener("focus", handlePlanningRunsChanged);
-
-  return () => {
-    window.removeEventListener("planning-runs-changed", handlePlanningRunsChanged);
-    window.removeEventListener("focus", handlePlanningRunsChanged);
-  };
-}, []);
-
-  const loadPlanningRunRows = async (planningRunId: string) => {
+  const loadPlanningRunRows = async (
+    planningRunId: string,
+    options?: { keepSelectedDate?: boolean }
+  ) => {
     if (!planningRunId) return;
 
     try {
@@ -238,22 +195,26 @@ useEffect(() => {
       }
 
       const json = await res.json();
+      const loadedRows: PlanningRow[] = json?.result?.rows || [];
 
-      const loadedRows = json?.result?.rows || [];
       setRows(loadedRows);
 
       const firstWorkday = loadedRows
-        .map((row: PlanningRow) => toIsoDay(row.Werkdag_iso || row.Werkdag))
-        .filter(Boolean)
+        .map((row) => toIsoDay(row.Werkdag_iso || row.Werkdag))
+        .filter((day): day is string => Boolean(day))
         .sort()[0];
 
-      if (firstWorkday) {
-        setSelectedDate(firstWorkday);
+      if (firstWorkday && !options?.keepSelectedDate) {
+        setSelectedDate((current) => current || firstWorkday);
       }
-      setSelectedPost("");
+
+      if (!options?.keepSelectedDate) {
+        setSelectedPost("");
+      }
+
       setExpandedTaskIds([]);
       setSelectedTaskId(null);
-      setDragOverDay(null);
+      setDragOverCell(null);
       setIsDraggingTask(false);
     } catch (error) {
       console.error("Fout bij laden planning rows:", error);
@@ -263,23 +224,9 @@ useEffect(() => {
     }
   };
 
-  const runPlanning = async () => {
+  const loadPlanningRuns = async () => {
     try {
-      setLoading(true);
-
-      const res = await fetch(`${API_URL}/api/v1/planning/run`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          start_monday: getCurrentMondayIso(),
-          start_week: 1,
-          cycles: 1,
-          explain: true,
-          overrides: [],
-        }),
-      });
+      const res = await fetch(`${API_URL}/api/v1/planning/runs`);
 
       if (!res.ok) {
         const text = await res.text();
@@ -287,36 +234,47 @@ useEffect(() => {
       }
 
       const json = await res.json();
-      setRows(json?.result?.rows || []);
-      setSelectedPost("");
-      setExpandedTaskIds([]);
-      setSelectedTaskId(null);
-      setDragOverDay(null);
-      setIsDraggingTask(false);
+      const runs: PlanningRun[] = json?.result || [];
+
+      setPlanningRuns(runs);
+
+      const activeRun = runs.find((run) => run.actief) || runs[0];
+
+      if (activeRun) {
+        setSelectedPlanningRunId(String(activeRun.id));
+        await loadPlanningRunRows(String(activeRun.id));
+      }
     } catch (error) {
-      console.error("Fout bij ophalen planning overview:", error);
+      console.error("Fout bij ophalen planningen:", error);
+      setPlanningRuns([]);
+      setSelectedPlanningRunId("");
       setRows([]);
-      setSelectedPost("");
-      setExpandedTaskIds([]);
-      setSelectedTaskId(null);
-      setDragOverDay(null);
-      setIsDraggingTask(false);
-    } finally {
-      setLoading(false);
     }
   };
 
+  useEffect(() => {
+    loadPlanningRuns();
+
+    const handlePlanningRunsChanged = () => {
+      loadPlanningRuns();
+    };
+
+    window.addEventListener("planning-runs-changed", handlePlanningRunsChanged);
+    window.addEventListener("focus", handlePlanningRunsChanged);
+
+    return () => {
+      window.removeEventListener("planning-runs-changed", handlePlanningRunsChanged);
+      window.removeEventListener("focus", handlePlanningRunsChanged);
+    };
+  }, []);
+
   const applyWorkdayOverride = async (planningId: string, targetWorkday: string) => {
     if (!targetWorkday) return;
+    if (!selectedPlanningRunId) return;
 
     try {
       setLoading(true);
-      console.log("MOVE URL:", `${API_URL}/api/v1/planning/override/move`);
-      console.log("MOVE PAYLOAD:", {
-        planning_id: planningId,
-        werkdag_override: targetWorkday,
-        planning_run_id: Number(selectedPlanningRunId),
-      });
+
       const res = await fetch(`${API_URL}/api/v1/planning/override/move`, {
         method: "POST",
         headers: {
@@ -334,12 +292,12 @@ useEffect(() => {
         throw new Error(`HTTP ${res.status}: ${text}`);
       }
 
-      await loadPlanningRunRows(selectedPlanningRunId);
+      await loadPlanningRunRows(selectedPlanningRunId, { keepSelectedDate: true });
     } catch (error) {
       console.error("Fout bij verplaatsen naar andere dag:", error);
     } finally {
       setIsDraggingTask(false);
-      setDragOverDay(null);
+      setDragOverCell(null);
       setLoading(false);
     }
   };
@@ -368,12 +326,12 @@ useEffect(() => {
         throw new Error(`HTTP ${res.status}: ${text}`);
       }
 
-      await loadPlanningRunRows(selectedPlanningRunId);
+      await loadPlanningRunRows(selectedPlanningRunId, { keepSelectedDate: true });
     } catch (error) {
       console.error("Fout bij verplaatsen naar andere post:", error);
     } finally {
       setIsDraggingTask(false);
-      setDragOverDay(null);
+      setDragOverCell(null);
       setLoading(false);
     }
   };
@@ -404,12 +362,12 @@ useEffect(() => {
         throw new Error(`HTTP ${res.status}: ${text}`);
       }
 
-      await loadPlanningRunRows(selectedPlanningRunId);
+      await loadPlanningRunRows(selectedPlanningRunId, { keepSelectedDate: true });
     } catch (error) {
       console.error("Fout bij taakvolgorde aanpassen:", error);
     } finally {
       setIsDraggingTask(false);
-      setDragOverDay(null);
+      setDragOverCell(null);
       setLoading(false);
     }
   };
@@ -463,11 +421,7 @@ useEffect(() => {
           .sort((a, b) => a[0].localeCompare(b[0]))
           .map(([post, postRows]) => ({
             post,
-            rows: [...postRows].sort((a, b) => {
-              const aTime = new Date(a.Start || "").getTime();
-              const bTime = new Date(b.Start || "").getTime();
-              return aTime - bTime;
-            }),
+            rows: [...postRows],
           })),
       }));
   }, [rows, selectedDate, mode, visibleDays]);
@@ -481,11 +435,6 @@ useEffect(() => {
 
     return Array.from(set).sort();
   }, [groupedDays]);
-
-  const getTasksForCell = (day: DayGroup, post: string) => {
-    const found = day.posts.find((p) => p.post === post);
-    return found?.rows || [];
-  };
 
   const availablePosts = useMemo(() => {
     if (mode !== "day") return [];
@@ -503,26 +452,20 @@ useEffect(() => {
     const postRows =
       selectedDayGroup.posts.find((postGroup) => postGroup.post === selectedPost)?.rows || [];
 
-    return [...postRows]
-      .sort((a, b) => {
-        const aTime = new Date(a.Start || "").getTime();
-        const bTime = new Date(b.Start || "").getTime();
-        return aTime - bTime;
-      })
-      .map((row, index) => ({
-        id: row["Planning ID"] || `${row.Post}-${row.Start}-${index}`,
-        post: row.Post || "Onbekende post",
-        werkdag: row.Werkdag || "",
-        werkdagIso: row.Werkdag_iso || "",
-        recept: row.Recept || "",
-        handeling: row.Taak || "",
-        start: row.Start || "",
-        einde: row.Einde || "",
-        stappen: parseSteps(row.Stappen),
-        locked: row.Locked === true,
-        isVasteTaak: row["Is vaste taak"] === true,
-        conflict: row["Toestel conflict"] === true,
-      }));
+    return [...postRows].map((row, index) => ({
+      id: row["Planning ID"] || `${row.Post}-${row.Start}-${index}`,
+      post: row.Post || "Onbekende post",
+      werkdag: row.Werkdag || "",
+      werkdagIso: row.Werkdag_iso || "",
+      recept: row.Recept || "",
+      handeling: row.Taak || "",
+      start: row.Start || "",
+      einde: row.Einde || "",
+      stappen: parseSteps(row.Stappen),
+      locked: row.Locked === true,
+      isVasteTaak: row["Is vaste taak"] === true,
+      conflict: row["Toestel conflict"] === true,
+    }));
   }, [groupedDays, mode, selectedPost]);
 
   const printableDayPosts = useMemo(() => {
@@ -534,29 +477,28 @@ useEffect(() => {
     return selectedDayGroup.posts
       .map((postGroup) => ({
         post: postGroup.post,
-        tasks: [...postGroup.rows]
-          .sort((a, b) => {
-            const aTime = new Date(a.Start || "").getTime();
-            const bTime = new Date(b.Start || "").getTime();
-            return aTime - bTime;
-          })
-          .map((row, index) => ({
-            id: row["Planning ID"] || `${row.Post}-${row.Start}-${index}`,
-            post: row.Post || "Onbekende post",
-            werkdag: row.Werkdag || "",
-            werkdagIso: row.Werkdag_iso || "",
-            recept: row.Recept || "",
-            handeling: row.Taak || "",
-            start: row.Start || "",
-            einde: row.Einde || "",
-            stappen: parseSteps(row.Stappen),
-            locked: row.Locked === true,
-            isVasteTaak: row["Is vaste taak"] === true,
-            conflict: row["Toestel conflict"] === true,
-          })),
+        tasks: [...postGroup.rows].map((row, index) => ({
+          id: row["Planning ID"] || `${row.Post}-${row.Start}-${index}`,
+          post: row.Post || "Onbekende post",
+          werkdag: row.Werkdag || "",
+          werkdagIso: row.Werkdag_iso || "",
+          recept: row.Recept || "",
+          handeling: row.Taak || "",
+          start: row.Start || "",
+          einde: row.Einde || "",
+          stappen: parseSteps(row.Stappen),
+          locked: row.Locked === true,
+          isVasteTaak: row["Is vaste taak"] === true,
+          conflict: row["Toestel conflict"] === true,
+        })),
       }))
       .filter((group) => group.tasks.length > 0);
   }, [groupedDays, mode]);
+
+  const getTasksForCell = (day: DayGroup, post: string) => {
+    const found = day.posts.find((p) => p.post === post);
+    return found?.rows || [];
+  };
 
   const handlePrintDay = () => {
     if (mode !== "day") return;
@@ -587,17 +529,51 @@ useEffect(() => {
     );
   };
 
-  const handleMoveTaskToDay = async (row: PlanningRow, targetDay: string) => {
-    const planningId = row["Planning ID"];
-    const currentDay = toIsoDay(row.Werkdag_iso || row.Werkdag);
+  const handleDropOnCell = async (rawRow: string, targetDay: string, targetPost: string) => {
+    if (!rawRow) return;
+
+    const draggedRow = JSON.parse(rawRow) as PlanningRow;
+    const planningId = draggedRow["Planning ID"];
+    const currentDay = toIsoDay(draggedRow.Werkdag_iso || draggedRow.Werkdag);
+    const currentPost = draggedRow.Post || "";
 
     if (!planningId) return;
-    if (!targetDay) return;
-    if (!currentDay) return;
-    if (row.Locked === true) return;
-    if (currentDay === targetDay) return;
+    if (draggedRow.Locked === true) return;
 
-    await applyWorkdayOverride(planningId, targetDay);
+    if (currentDay !== targetDay) {
+      await applyWorkdayOverride(planningId, targetDay);
+    }
+
+    if (currentPost !== targetPost) {
+      await applyPostOverride(planningId, targetPost);
+    }
+  };
+
+  const handleDropOnTask = async (rawRow: string, targetRow: PlanningRow, fallbackDay: string, fallbackPost: string) => {
+    if (!rawRow) return;
+
+    const draggedRow = JSON.parse(rawRow) as PlanningRow;
+    const draggedPlanningId = draggedRow["Planning ID"];
+    const targetPlanningId = targetRow["Planning ID"];
+
+    if (!draggedPlanningId || !targetPlanningId) return;
+    if (draggedPlanningId === targetPlanningId) return;
+    if (draggedRow.Locked === true) return;
+
+    const draggedDay = toIsoDay(draggedRow.Werkdag_iso || draggedRow.Werkdag);
+    const targetDay = toIsoDay(targetRow.Werkdag_iso || targetRow.Werkdag) || fallbackDay;
+    const draggedPost = draggedRow.Post || "";
+    const targetPost = targetRow.Post || fallbackPost;
+
+    if (draggedDay !== targetDay) {
+      await applyWorkdayOverride(draggedPlanningId, targetDay);
+    }
+
+    if (draggedPost !== targetPost) {
+      await applyPostOverride(draggedPlanningId, targetPost);
+    }
+
+    await applyTaskReorder(draggedPlanningId, targetPlanningId);
   };
 
   return (
@@ -692,6 +668,7 @@ useEffect(() => {
               ))}
             </select>
           </label>
+
           <label style={labelStyle}>
             Datum
             <input
@@ -702,7 +679,7 @@ useEffect(() => {
                 setSelectedPost("");
                 setExpandedTaskIds([]);
                 setSelectedTaskId(null);
-                setDragOverDay(null);
+                setDragOverCell(null);
               }}
               style={inputStyle}
             />
@@ -751,16 +728,14 @@ useEffect(() => {
                   setSelectedPost("");
                   setExpandedTaskIds([]);
                   setSelectedTaskId(null);
-                  setDragOverDay(null);
+                  setDragOverCell(null);
                 }}
                 style={{
                   background: isActive ? colors.primarySoft : colors.bg,
                   color: colors.text,
                   opacity: isActive ? 1 : 0.75,
                   fontWeight: isActive ? 700 : 500,
-                  border: `1px solid ${
-                    isActive ? colors.selectedBorder : colors.border
-                  }`,
+                  border: `1px solid ${isActive ? colors.selectedBorder : colors.border}`,
                   borderRadius: 999,
                   padding: "10px 14px",
                 }}
@@ -862,8 +837,8 @@ useEffect(() => {
           {mode === "day"
             ? "Geen taken zichtbaar op de gekozen dag."
             : mode === "aroundDay"
-            ? "Geen taken zichtbaar rond de gekozen dag."
-            : "Geen taken zichtbaar vanaf de gekozen datum."}
+              ? "Geen taken zichtbaar rond de gekozen dag."
+              : "Geen taken zichtbaar vanaf de gekozen datum."}
         </div>
       ) : null}
 
@@ -958,47 +933,32 @@ useEffect(() => {
 
                 {groupedDays.map((day) => {
                   const cellRows = getTasksForCell(day, post);
+                  const cellKey = `${day.day}-${post}`;
 
                   return (
                     <div
-                      key={`${day.day}-${post}`}
+                      key={cellKey}
                       onDragOver={(e) => {
                         e.preventDefault();
                         e.dataTransfer.dropEffect = "move";
-                        if (dragOverDay !== day.day) {
-                          setDragOverDay(day.day);
+                        if (dragOverCell !== cellKey) {
+                          setDragOverCell(cellKey);
                         }
                       }}
                       onDragLeave={() => {
-                        if (dragOverDay === day.day) {
-                          setDragOverDay(null);
+                        if (dragOverCell === cellKey) {
+                          setDragOverCell(null);
                         }
                       }}
                       onDrop={async (e) => {
                         e.preventDefault();
 
                         const rawRow = e.dataTransfer.getData("application/planning-row");
-                        if (!rawRow) {
-                          setDragOverDay(null);
-                          setIsDraggingTask(false);
-                          return;
-                        }
 
                         try {
-                          const draggedRow = JSON.parse(rawRow) as PlanningRow;
-                          const currentDay = toIsoDay(draggedRow.Werkdag_iso || draggedRow.Werkdag);
-                          const currentPost = draggedRow.Post || "";
-
-                          if (currentDay !== day.day) {
-                            await handleMoveTaskToDay(draggedRow, day.day);
-                          } else if (currentPost !== post) {
-                            const planningId = draggedRow["Planning ID"];
-                            if (planningId) {
-                              await applyPostOverride(planningId, post);
-                            }
-                          };
+                          await handleDropOnCell(rawRow, day.day, post);
                         } finally {
-                          setDragOverDay(null);
+                          setDragOverCell(null);
                           setIsDraggingTask(false);
                         }
                       }}
@@ -1007,12 +967,12 @@ useEffect(() => {
                         borderRadius: 14,
                         padding: 7,
                         background:
-                          dragOverDay === day.day
+                          dragOverCell === cellKey
                             ? "#fff8de"
                             : mode === "aroundDay" && day.day === selectedDate
-                            ? colors.primarySoft
-                            : colors.bg,
-                        outline: dragOverDay === day.day ? `2px dashed ${colors.primary}` : "none",
+                              ? colors.primarySoft
+                              : colors.bg,
+                        outline: dragOverCell === cellKey ? `2px dashed ${colors.primary}` : "none",
                         outlineOffset: -2,
                         minHeight: 36,
                         display: "flex",
@@ -1034,9 +994,7 @@ useEffect(() => {
                         />
                       ) : (
                         cellRows.map((row, index) => {
-                          const taskId = String(
-                            row["Planning ID"] || `${day.day}-${post}-${index}`
-                          );
+                          const taskId = String(row["Planning ID"] || `${day.day}-${post}-${index}`);
                           const isExpanded = expandedTaskIds.includes(taskId);
                           const steps = parseSteps(row.Stappen);
 
@@ -1051,6 +1009,7 @@ useEffect(() => {
                                   return;
                                 }
 
+                                setSelectedTaskId(taskId);
                                 setIsDraggingTask(true);
                                 e.dataTransfer.setData(
                                   "application/planning-row",
@@ -1067,32 +1026,17 @@ useEffect(() => {
                                 e.stopPropagation();
 
                                 const rawRow = e.dataTransfer.getData("application/planning-row");
-                                if (!rawRow) return;
 
-                                const draggedRow = JSON.parse(rawRow) as PlanningRow;
-                                const draggedPlanningId = draggedRow["Planning ID"];
-                                const targetPlanningId = row["Planning ID"];
-
-                                if (!draggedPlanningId || !targetPlanningId) return;
-                                if (draggedPlanningId === targetPlanningId) return;
-
-                                const draggedDay = toIsoDay(draggedRow.Werkdag_iso || draggedRow.Werkdag);
-                                const targetDay = toIsoDay(row.Werkdag_iso || row.Werkdag);
-
-                                if (draggedDay !== targetDay) {
-                                  await handleMoveTaskToDay(draggedRow, targetDay || day.day);
-                                  return;
+                                try {
+                                  await handleDropOnTask(rawRow, row, day.day, post);
+                                } finally {
+                                  setDragOverCell(null);
+                                  setIsDraggingTask(false);
                                 }
-
-                                if ((draggedRow.Post || "") !== (row.Post || "")) {
-                                  await applyPostOverride(draggedPlanningId, row.Post || post);
-                                }
-
-                                await applyTaskReorder(draggedPlanningId, targetPlanningId);
                               }}
                               onDragEnd={() => {
                                 setIsDraggingTask(false);
-                                setDragOverDay(null);
+                                setDragOverCell(null);
                               }}
                               onClick={() => {
                                 if (isDraggingTask) return;
@@ -1106,9 +1050,7 @@ useEffect(() => {
                                 padding: "7px 9px",
                                 borderRadius: 10,
                                 background:
-                                  selectedTaskId === taskId
-                                    ? colors.selectedBg
-                                    : getRowBackground(row),
+                                  selectedTaskId === taskId ? colors.selectedBg : getRowBackground(row),
                                 border: getRowBorder(row),
                                 fontSize: 11,
                                 cursor: row.Locked === true ? "not-allowed" : "grab",
