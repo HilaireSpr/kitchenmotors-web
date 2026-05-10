@@ -18,6 +18,11 @@ type PlanningRow = {
   "Is vaste taak"?: boolean | null;
   "Toestel conflict"?: boolean | null;
   Stappen?: string | null;
+
+  "Dependency status"?: "ok" | "warning" | "blocked" | null;
+  "Dependency warning"?: string | null;
+  "Dependency previous task"?: string | null;
+  "Dependency previous end"?: string | null;
 };
 
 type PlanningRun = {
@@ -1135,6 +1140,41 @@ export default function PlanningOverview() {
                                       }}
                                     >
                                       ⚠
+                                    </span>
+                                  ) : null}
+
+                                  {row["Dependency status"] === "blocked" ? (
+                                    <span
+                                      style={{
+                                        fontSize: 11,
+                                        padding: "2px 6px",
+                                        borderRadius: 999,
+                                        background: "#fee2e2",
+                                        color: "#991b1b",
+                                        fontWeight: 700,
+                                      }}
+                                      title={row["Dependency warning"] || "Volgordeprobleem"}
+                                    >
+                                      ⚠ volgorde
+                                    </span>
+                                  ) : null}
+
+                                  {row["Dependency status"] === "warning" ? (
+                                    <span
+                                      style={{
+                                        fontSize: 11,
+                                        padding: "2px 6px",
+                                        borderRadius: 999,
+                                        background: "#fef3c7",
+                                        color: "#92400e",
+                                        fontWeight: 700,
+                                      }}
+                                      title={
+                                        row["Dependency warning"] ||
+                                        "Afhankelijkheid niet controleerbaar"
+                                      }
+                                    >
+                                      ? volgorde
                                     </span>
                                   ) : null}
                                 </div>
