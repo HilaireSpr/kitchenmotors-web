@@ -182,6 +182,7 @@ export default function PlanningOverview() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isDraggingTask, setIsDraggingTask] = useState(false);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
+  const [dragError, setDragError] = useState<string | null>(null);
 
   const loadPlanningRunRows = async (
     planningRunId: string,
@@ -191,6 +192,9 @@ export default function PlanningOverview() {
 
     try {
       setLoading(true);
+      if (!options?.keepSelectedDate) {
+        setDragError(null);
+      }
 
       const res = await fetch(`${API_URL}/api/v1/planning/runs/${planningRunId}`);
 
@@ -364,7 +368,19 @@ export default function PlanningOverview() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`HTTP ${res.status}: ${text}`);
+
+        let message = "Deze verplaatsing is niet toegelaten.";
+
+        try {
+          const parsed = JSON.parse(text);
+          message = parsed?.detail || message;
+        } catch {
+          message = text || message;
+        }
+
+        setDragError(message);
+        await loadPlanningRunRows(selectedPlanningRunId, { keepSelectedDate: true });
+        return;
       }
 
       await loadPlanningRunRows(selectedPlanningRunId, { keepSelectedDate: true });
@@ -844,6 +860,23 @@ export default function PlanningOverview() {
             : mode === "aroundDay"
               ? "Geen taken zichtbaar rond de gekozen dag."
               : "Geen taken zichtbaar vanaf de gekozen datum."}
+        </div>
+      ) : null}
+
+      {dragError ? (
+        <div
+          className="no-print"
+          style={{
+            padding: "12px 14px",
+            borderRadius: 14,
+            border: "1px solid #fecaca",
+            background: "#fee2e2",
+            color: "#991b1b",
+            fontWeight: 700,
+            fontSize: 13,
+          }}
+        >
+          {dragError}
         </div>
       ) : null}
 
