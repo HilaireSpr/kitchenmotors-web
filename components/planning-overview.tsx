@@ -183,6 +183,7 @@ export default function PlanningOverview() {
   const [isDraggingTask, setIsDraggingTask] = useState(false);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
   const [dragError, setDragError] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const loadPlanningRunRows = async (
     planningRunId: string,
@@ -599,8 +600,10 @@ export default function PlanningOverview() {
 
   return (
     <div
-      className="planning-overview-root"
+      className={`planning-overview-root ${isFullscreen ? "planning-overview-fullscreen" : ""}`}
       data-print-mode={printMode}
+      data-fullscreen={isFullscreen ? "true" : "false"}
+      onDoubleClick={() => setIsFullscreen(true)}
       style={{
         ...cardStyle,
         padding: 24,
@@ -621,6 +624,7 @@ export default function PlanningOverview() {
         <div>
           <h2 style={sectionTitleStyle}>Overzicht & print</h2>
           <p
+            className="planning-overview-intro"
             style={{
               margin: "8px 0 0 0",
               color: colors.textMuted,
@@ -629,8 +633,7 @@ export default function PlanningOverview() {
               maxWidth: 780,
             }}
           >
-            Compact overzicht van de planning per dag en per post, met stappen voor uitvoering
-            en printweergave voor de keuken.
+            Compact overzicht van de planning per dag en per post...
           </p>
         </div>
 
@@ -652,7 +655,7 @@ export default function PlanningOverview() {
       </div>
 
       <div
-        className="no-print"
+        className="no-print planning-overview-controls"
         style={{
           ...cardStyle,
           padding: 18,
@@ -819,6 +822,22 @@ export default function PlanningOverview() {
           >
             Print gekozen post
           </button>
+
+          <button
+            type="button"
+            className="button"
+            onClick={() => setIsFullscreen((current) => !current)}
+            style={{
+              background: isFullscreen ? colors.primarySoft : colors.bg,
+              color: colors.text,
+              border: `1px solid ${isFullscreen ? colors.selectedBorder : colors.border}`,
+              borderRadius: 12,
+              padding: "12px 18px",
+              fontWeight: 600,
+            }}
+          >
+            {isFullscreen ? "Sluit fullscreen" : "Fullscreen"}
+          </button>
         </div>
 
         <div
@@ -882,7 +901,8 @@ export default function PlanningOverview() {
 
       {groupedDays.length > 0 ? (
         <div
-          style={{
+        className="planning-overview-scroll"  
+        style={{
             overflowX: "auto",
             overflowY: "auto",
             maxHeight: "72vh",
@@ -912,6 +932,7 @@ export default function PlanningOverview() {
             {groupedDays.map((day) => (
               <div
                 key={day.day}
+                className="planning-day-header"
                 style={{
                   position: "sticky",
                   top: 0,
@@ -937,7 +958,10 @@ export default function PlanningOverview() {
                 >
                   {formatDayLabel(day.day)}
                 </div>
-                <div style={{ fontSize: 12, color: colors.textMuted }}>
+                <div
+                  className="planning-day-count"
+                  style={{ fontSize: 12, color: colors.textMuted }}
+                >
                   {day.posts.reduce((sum, p) => sum + p.rows.length, 0)} handelingen
                 </div>
               </div>
@@ -951,6 +975,7 @@ export default function PlanningOverview() {
                 }}
               >
                 <div
+                  className="planning-day-title"
                   style={{
                     position: "sticky",
                     left: 0,
@@ -1669,6 +1694,71 @@ export default function PlanningOverview() {
 
         .print-day-only {
           display: none;
+        }
+
+        .planning-overview-fullscreen {
+          position: fixed !important;
+          inset: 12px !important;
+          z-index: 9999 !important;
+          width: auto !important;
+          height: auto !important;
+          max-height: calc(100vh - 24px) !important;
+          overflow: hidden !important;
+          background: white !important;
+        }
+
+        .planning-overview-fullscreen > div {
+          max-width: none !important;
+        }
+
+        .planning-overview-fullscreen .planning-overview-scroll {
+          max-height: calc(100vh - 250px) !important;
+        }
+        
+        .planning-overview-root[data-fullscreen="true"] {
+          gap: 10px !important;
+        }
+
+        .planning-overview-root[data-fullscreen="true"] .planning-overview-intro {
+          display: none !important;
+        }
+
+        .planning-overview-root[data-fullscreen="true"] .planning-overview-controls {
+          padding: 10px 14px !important;
+          gap: 10px !important;
+        }
+
+        .planning-overview-root[data-fullscreen="true"] .planning-overview-controls label {
+          gap: 4px !important;
+        }
+
+        .planning-overview-root[data-fullscreen="true"] .planning-overview-controls select,
+        .planning-overview-root[data-fullscreen="true"] .planning-overview-controls input {
+          padding: 8px 10px !important;
+          min-height: 38px !important;
+        }
+
+        .planning-overview-root[data-fullscreen="true"] .planning-overview-controls button {
+          padding: 8px 12px !important;
+        }
+
+        .planning-overview-root[data-fullscreen="true"] .planning-overview-scroll {
+          max-height: calc(100vh - 180px) !important;
+        }
+
+        .planning-overview-root[data-fullscreen="true"] .planning-day-header {
+          padding: 8px !important;
+          border-radius: 10px !important;
+        }
+
+        .planning-overview-root[data-fullscreen="true"] .planning-day-title {
+          font-size: 12px !important;
+          margin-bottom: 2px !important;
+        }
+
+        .planning-overview-root[data-fullscreen="true"] .planning-day-count {
+          font-size: 10px !important;
+          line-height: 1.1 !important;
         }
 
         @media print {
