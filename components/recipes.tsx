@@ -71,6 +71,13 @@ type StapFormState = {
   tijd: number;
 };
 
+type NewRecipeFormState = {
+  code: string;
+  naam: string;
+  categorie: string;
+  menu_groep: string;
+};
+
 function createEmptyHandelingForm(): HandelingFormState {
   return {
     naam: "",
@@ -90,6 +97,15 @@ function createEmptyStapForm(): StapFormState {
   return {
     naam: "",
     tijd: 0,
+  };
+}
+
+function createEmptyRecipeForm(): NewRecipeFormState {
+  return {
+    code: "",
+    naam: "",
+    categorie: "",
+    menu_groep: "",
   };
 }
 
@@ -134,12 +150,29 @@ export default function ImportRecipes() {
   const [recipeDetail, setRecipeDetail] = useState<RecipeDetail | null>(null);
   const [openCategories, setOpenCategories] = useState<string[]>([]);
 
+  const [showCreateRecipe, setShowCreateRecipe] = useState(false);
+  const [creatingRecipe, setCreatingRecipe] = useState(false);
+  const [newRecipeForm, setNewRecipeForm] = useState<NewRecipeFormState>(
+    createEmptyRecipeForm()
+  );
+
+  const [showCreateHandeling, setShowCreateHandeling] = useState(false);
+  const [creatingHandeling, setCreatingHandeling] = useState(false);
+
   const [editingHandelingId, setEditingHandelingId] = useState<number | null>(null);
   const [savingHandelingId, setSavingHandelingId] = useState<number | null>(null);
   const [openHandelingIds, setOpenHandelingIds] = useState<number[]>([]);
   const [handelingForm, setHandelingForm] = useState<HandelingFormState>(
     createEmptyHandelingForm()
   );
+  const [newHandelingForm, setNewHandelingForm] = useState<HandelingFormState>(
+    createEmptyHandelingForm()
+  );
+
+  const [creatingStapForHandelingId, setCreatingStapForHandelingId] = useState<number | null>(null);
+  const [newStapFormByHandelingId, setNewStapFormByHandelingId] = useState<
+    Record<number, StapFormState>
+  >({});
 
   const [editingStapId, setEditingStapId] = useState<number | null>(null);
   const [savingStapId, setSavingStapId] = useState<number | null>(null);
@@ -224,6 +257,154 @@ export default function ImportRecipes() {
       setError(err instanceof Error ? err.message : "Fout bij upload");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function createRecipe() {
+    if (!newRecipeForm.code.trim() || !newRecipeForm.naam.trim()) {
+      setError("Code en naam zijn verplicht.");
+      return;
+    }
+
+    try {
+      setCreatingRecipe(true);
+      setError("");
+
+      const res = await fetch(`${API_URL}/api/v1/recipes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          code: newRecipeForm.code.trim(),
+          naam: newRecipeForm.naam.trim(),
+          categorie: newRecipeForm.categorie.trim() || null,
+          menu_groep: newRecipeForm.menu_groep.trim() || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text);
+      }
+
+      const json = await res.json();
+      const created = json.result;
+
+      setNewRecipeForm(createEmptyRecipeForm());
+      setShowCreateRecipe(false);
+
+      await loadRecipes();
+
+      if (created?.recept_code) {
+        setSelectedRecipe(created.recept_code);
+        await loadRecipeDetail(created.recept_code);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Fout bij aanmaken recept");
+    } finally {
+      setCreatingRecipe(false);
+    }
+  }
+
+  async function createHandeling() {
+    if (!recipeDetail?.recept_id) {
+      setError("Geen recept geselecteerd.");
+      return;
+    }
+
+    if (!newHandelingForm.naam.trim()) {
+      setError("Handeling naam is verplicht.");
+      return;
+    }
+
+    try {
+      setCreatingHandeling(true);
+      setError("");
+
+      const dagOffset = parseIntegerString(newHandelingForm.dag_offset, 0);
+      const dagOffsetMin = parseIntegerString(newHandelingForm.dag_offset_min, dagOffset);
+      const dagOffsetMax = parseIntegerString(newHandelingForm.dag_offset_max, dagOffset);
+
+      const code =
+        newHandelingForm.naam.trim().toUpperCase().replace(/\s+/g, "_") ||
+        `HAND_${Date.now()}`;
+
+      const res = await fetch(`${API_URL}/api/v1/recipes/${recipeDetail.recept_id}/handelingen`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          code,
+          naam: newHandelingForm.naam.trim(),
+          post: newHandelingForm.post.trim() || null,
+          toestel: newHandelingForm.toestel.trim() || null,
+          dag_offset: dagOffset,
+          min_offset_dagen: dagOffsetMin,
+          max_offset_dagen: dagOffsetMax,
+          passieve_tijd: Number(newHandelingForm.passieve_tijd) || 0,
+          is_vaste_taak: newHandelingForm.is_vaste_taak,
+          heeft_vast_startuur: newHandelingForm.heeft_vast_startuur,
+          vast_startuur: newHandelingForm.heeft_vast_startuur
+            ? newHandelingForm.vast_startuur || "08:00"
+            : null,
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text);
+      }
+
+      setNewHandelingForm(createEmptyHandelingForm());
+      setShowCreateHandeling(false);
+      await reloadSelectedRecipeDetail();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Fout bij aanmaken handeling");
+    } finally {
+      setCreatingHandeling(false);
+    }
+  }
+
+  async function createStap(handelingId: number) {
+    const form = newStapFormByHandelingId[handelingId] || createEmptyStapForm();
+
+    if (!form.naam.trim()) {
+      setError("Stap naam is verplicht.");
+      return;
+    }
+
+    try {
+      setCreatingStapForHandelingId(handelingId);
+      setError("");
+
+      const res = await fetch(`${API_URL}/api/v1/recipes/handelingen/${handelingId}/stappen`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          naam: form.naam.trim(),
+          tijd: Number(form.tijd) || 0,
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text);
+      }
+
+      setNewStapFormByHandelingId((prev) => ({
+        ...prev,
+        [handelingId]: createEmptyStapForm(),
+      }));
+
+      await reloadSelectedRecipeDetail();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Fout bij aanmaken stap");
+    } finally {
+      setCreatingStapForHandelingId(null);
     }
   }
 
@@ -355,16 +536,12 @@ export default function ImportRecipes() {
       const payload = {
         naam: handelingForm.naam,
         handeling_naam: handelingForm.naam,
-
         post: handelingForm.post,
         toestel: handelingForm.toestel,
-
         dag_offset: dagOffset,
         min_offset_dagen: dagOffsetMin,
         max_offset_dagen: dagOffsetMax,
-
         passieve_tijd: Number(handelingForm.passieve_tijd) || 0,
-
         is_vaste_taak: handelingForm.is_vaste_taak,
         heeft_vast_startuur: handelingForm.heeft_vast_startuur,
         vast_startuur: handelingForm.heeft_vast_startuur
@@ -426,14 +603,125 @@ export default function ImportRecipes() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div className="card" style={{ ...cardStyle, padding: 16 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <h2 style={{ margin: 0 }}>Recepten</h2>
-          <p style={{ margin: 0, color: colors.textMuted }}>
-            Beheer en controleer je recepten, handelingen en stappen. Import via Excel
-            blijft beschikbaar onderaan.
-          </p>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 12,
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <h2 style={{ margin: 0 }}>Recepten</h2>
+            <p style={{ margin: 0, color: colors.textMuted }}>
+              Beheer en controleer je recepten, handelingen en stappen. Import via Excel
+              blijft beschikbaar onderaan.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="button"
+            onClick={() => setShowCreateRecipe((current) => !current)}
+            style={{
+              background: colors.primary,
+              color: colors.text,
+              flexShrink: 0,
+            }}
+          >
+            {showCreateRecipe ? "Nieuw recept annuleren" : "Nieuw recept"}
+          </button>
         </div>
       </div>
+
+      {showCreateRecipe ? (
+        <div
+          className="card"
+          style={{
+            ...cardStyle,
+            padding: 16,
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+          }}
+        >
+          <h3 style={{ margin: 0 }}>Nieuw recept</h3>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 12,
+            }}
+          >
+            <TextInput
+              label="Recept code"
+              value={newRecipeForm.code}
+              onChange={(value) =>
+                setNewRecipeForm((prev) => ({ ...prev, code: value }))
+              }
+            />
+
+            <TextInput
+              label="Recept naam"
+              value={newRecipeForm.naam}
+              onChange={(value) =>
+                setNewRecipeForm((prev) => ({ ...prev, naam: value }))
+              }
+            />
+
+            <TextInput
+              label="Categorie"
+              value={newRecipeForm.categorie}
+              onChange={(value) =>
+                setNewRecipeForm((prev) => ({ ...prev, categorie: value }))
+              }
+            />
+
+            <TextInput
+              label="Menu-groep"
+              value={newRecipeForm.menu_groep}
+              onChange={(value) =>
+                setNewRecipeForm((prev) => ({ ...prev, menu_groep: value }))
+              }
+            />
+          </div>
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="button"
+              onClick={createRecipe}
+              disabled={creatingRecipe}
+              style={{
+                background: colors.primary,
+                color: colors.text,
+                opacity: creatingRecipe ? 0.7 : 1,
+              }}
+            >
+              {creatingRecipe ? "Aanmaken..." : "Recept aanmaken"}
+            </button>
+
+            <button
+              type="button"
+              className="button"
+              onClick={() => {
+                setShowCreateRecipe(false);
+                setNewRecipeForm(createEmptyRecipeForm());
+              }}
+              disabled={creatingRecipe}
+              style={{
+                background: colors.bgMuted,
+                color: colors.text,
+                border: `1px solid ${colors.border}`,
+              }}
+            >
+              Annuleren
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {error ? (
         <div
@@ -676,6 +964,206 @@ export default function ImportRecipes() {
                   )} min`}
                 />
               </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                }}
+              >
+                <h4 style={{ margin: 0 }}>Handelingen</h4>
+
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => setShowCreateHandeling((current) => !current)}
+                  style={{
+                    background: colors.primary,
+                    color: colors.text,
+                  }}
+                >
+                  {showCreateHandeling ? "Handeling annuleren" : "Handeling toevoegen"}
+                </button>
+              </div>
+
+              {showCreateHandeling ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 14,
+                    padding: 14,
+                    borderRadius: 12,
+                    background: colors.primarySoft,
+                    border: `1px solid ${colors.border}`,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                      gap: 12,
+                    }}
+                  >
+                    <TextInput
+                      label="Handeling naam"
+                      value={newHandelingForm.naam}
+                      onChange={(value) =>
+                        setNewHandelingForm((prev) => ({ ...prev, naam: value }))
+                      }
+                    />
+
+                    <TextInput
+                      label="Post"
+                      value={newHandelingForm.post}
+                      onChange={(value) =>
+                        setNewHandelingForm((prev) => ({ ...prev, post: value }))
+                      }
+                    />
+
+                    <TextInput
+                      label="Toestel"
+                      value={newHandelingForm.toestel}
+                      onChange={(value) =>
+                        setNewHandelingForm((prev) => ({ ...prev, toestel: value }))
+                      }
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                      gap: 12,
+                    }}
+                  >
+                    <IntegerInput
+                      label="Voorkeursdag"
+                      value={newHandelingForm.dag_offset}
+                      onChange={(value) =>
+                        setNewHandelingForm((prev) => ({ ...prev, dag_offset: value }))
+                      }
+                    />
+
+                    <IntegerInput
+                      label="Vroegste dag"
+                      value={newHandelingForm.dag_offset_min}
+                      onChange={(value) =>
+                        setNewHandelingForm((prev) => ({ ...prev, dag_offset_min: value }))
+                      }
+                    />
+
+                    <IntegerInput
+                      label="Laatste dag"
+                      value={newHandelingForm.dag_offset_max}
+                      onChange={(value) =>
+                        setNewHandelingForm((prev) => ({ ...prev, dag_offset_max: value }))
+                      }
+                    />
+
+                    <NumberInput
+                      label="Passieve tijd"
+                      value={newHandelingForm.passieve_tijd}
+                      onChange={(value) =>
+                        setNewHandelingForm((prev) => ({ ...prev, passieve_tijd: value }))
+                      }
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                      gap: 12,
+                      alignItems: "end",
+                    }}
+                  >
+                    <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input
+                        type="checkbox"
+                        checked={newHandelingForm.is_vaste_taak}
+                        onChange={(e) =>
+                          setNewHandelingForm((prev) => ({
+                            ...prev,
+                            is_vaste_taak: e.target.checked,
+                          }))
+                        }
+                      />
+                      <span style={{ fontSize: 14, color: colors.text }}>Vaste taak</span>
+                    </label>
+
+                    <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input
+                        type="checkbox"
+                        checked={newHandelingForm.heeft_vast_startuur}
+                        onChange={(e) =>
+                          setNewHandelingForm((prev) => ({
+                            ...prev,
+                            heeft_vast_startuur: e.target.checked,
+                            vast_startuur: e.target.checked ? prev.vast_startuur || "08:00" : "",
+                          }))
+                        }
+                      />
+                      <span style={{ fontSize: 14, color: colors.text }}>Vast startuur</span>
+                    </label>
+
+                    {newHandelingForm.heeft_vast_startuur ? (
+                      <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        <span style={labelTextStyle}>Startuur</span>
+                        <input
+                          type="time"
+                          value={newHandelingForm.vast_startuur}
+                          onChange={(e) =>
+                            setNewHandelingForm((prev) => ({
+                              ...prev,
+                              vast_startuur: e.target.value,
+                            }))
+                          }
+                          style={inputStyle}
+                        />
+                      </label>
+                    ) : (
+                      <div />
+                    )}
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="button"
+                      onClick={createHandeling}
+                      disabled={creatingHandeling}
+                      style={{
+                        background: colors.primary,
+                        color: colors.text,
+                        opacity: creatingHandeling ? 0.7 : 1,
+                      }}
+                    >
+                      {creatingHandeling ? "Toevoegen..." : "Handeling toevoegen"}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="button"
+                      onClick={() => {
+                        setShowCreateHandeling(false);
+                        setNewHandelingForm(createEmptyHandelingForm());
+                      }}
+                      disabled={creatingHandeling}
+                      style={{
+                        background: colors.bgMuted,
+                        color: colors.text,
+                        border: `1px solid ${colors.border}`,
+                      }}
+                    >
+                      Annuleren
+                    </button>
+                  </div>
+                </div>
+              ) : null}
 
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {recipeDetail.handelingen.map((handeling) => {
@@ -1026,13 +1514,115 @@ export default function ImportRecipes() {
                           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             <div
                               style={{
-                                fontSize: 13,
-                                fontWeight: 700,
-                                color: colors.textMuted,
+                                display: "flex",
+                                justifyContent: "space-between",
+                                gap: 8,
+                                alignItems: "center",
                               }}
                             >
-                              Stappen
+                              <div
+                                style={{
+                                  fontSize: 13,
+                                  fontWeight: 700,
+                                  color: colors.textMuted,
+                                }}
+                              >
+                                Stappen
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setNewStapFormByHandelingId((prev) => ({
+                                    ...prev,
+                                    [handeling.handeling_id]:
+                                      prev[handeling.handeling_id] || createEmptyStapForm(),
+                                  }));
+                                }}
+                                style={{
+                                  fontSize: 12,
+                                  border: `1px solid ${colors.border}`,
+                                  background: colors.bg,
+                                  borderRadius: 8,
+                                  padding: "4px 8px",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                + Stap
+                              </button>
                             </div>
+
+                            {newStapFormByHandelingId[handeling.handeling_id] ? (
+                              <div
+                                style={{
+                                  display: "grid",
+                                  gridTemplateColumns: "1fr 90px 120px",
+                                  gap: 8,
+                                  alignItems: "end",
+                                  padding: 10,
+                                  borderRadius: 8,
+                                  background: colors.primarySoft,
+                                  border: `1px solid ${colors.border}`,
+                                }}
+                              >
+                                <TextInput
+                                  label="Nieuwe stap"
+                                  value={newStapFormByHandelingId[handeling.handeling_id]?.naam || ""}
+                                  onChange={(value) =>
+                                    setNewStapFormByHandelingId((prev) => ({
+                                      ...prev,
+                                      [handeling.handeling_id]: {
+                                        ...(prev[handeling.handeling_id] || createEmptyStapForm()),
+                                        naam: value,
+                                      },
+                                    }))
+                                  }
+                                />
+
+                                <NumberInput
+                                  label="Tijd"
+                                  value={newStapFormByHandelingId[handeling.handeling_id]?.tijd || 0}
+                                  onChange={(value) =>
+                                    setNewStapFormByHandelingId((prev) => ({
+                                      ...prev,
+                                      [handeling.handeling_id]: {
+                                        ...(prev[handeling.handeling_id] || createEmptyStapForm()),
+                                        tijd: value,
+                                      },
+                                    }))
+                                  }
+                                />
+
+                                <div style={{ display: "flex", gap: 6 }}>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      createStap(handeling.handeling_id);
+                                    }}
+                                    disabled={creatingStapForHandelingId === handeling.handeling_id}
+                                  >
+                                    {creatingStapForHandelingId === handeling.handeling_id ? "..." : "Toevoegen"}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setNewStapFormByHandelingId((prev) => {
+                                        const next = { ...prev };
+                                        delete next[handeling.handeling_id];
+                                        return next;
+                                      });
+                                    }}
+                                    disabled={creatingStapForHandelingId === handeling.handeling_id}
+                                  >
+                                    ✖
+                                  </button>
+                                </div>
+                              </div>
+                            ) : null}
 
                             {handeling.stappen.length === 0 ? (
                               <div
@@ -1333,7 +1923,11 @@ function IntegerInput({
       <input
         type="number"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          if (isValidIntegerInput(e.target.value)) {
+            onChange(e.target.value);
+          }
+        }}
         style={inputStyle}
       />
     </label>
@@ -1382,11 +1976,7 @@ function HandelingStats({ handeling }: { handeling: RecipeHandeling }) {
       <SmallStat label="Totale duur" value={`${handeling.totale_duur} min`} />
       <SmallStat
         label="Vast startuur"
-        value={
-          handeling.heeft_vast_startuur
-            ? handeling.vast_startuur || "-"
-            : "Nee"
-        }
+        value={handeling.heeft_vast_startuur ? handeling.vast_startuur || "-" : "Nee"}
       />
     </div>
   );
