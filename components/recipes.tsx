@@ -295,6 +295,8 @@ export default function ImportRecipes() {
       setShowCreateRecipe(false);
 
       await loadRecipes();
+      
+      window.dispatchEvent(new Event("recipes-changed"));
 
       if (created?.recept_code) {
         setSelectedRecipe(created.recept_code);

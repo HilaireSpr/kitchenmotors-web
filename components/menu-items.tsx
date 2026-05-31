@@ -239,6 +239,31 @@ export default function MenuItems() {
 
   useEffect(() => {
     loadData();
+
+    const handleRecipesChanged = () => {
+      loadData();
+    };
+
+    window.addEventListener("recipes-changed", handleRecipesChanged);
+
+    return () => {
+      window.removeEventListener(
+        "recipes-changed",
+        handleRecipesChanged
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      loadData();
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+    };
   }, []);
 
   useEffect(() => {
