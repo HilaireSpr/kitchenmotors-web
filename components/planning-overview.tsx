@@ -349,6 +349,40 @@ export default function PlanningOverview() {
     }
   };
 
+  const applyToestelOverride = async (planningId: string, targetToestel: string) => {
+    if (!planningId) return;
+    if (!selectedPlanningRunId) return;
+
+    try {
+      setLoading(true);
+
+      const res = await fetch(`${API_URL}/api/v1/planning/override/toestel`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          planning_id: planningId,
+          toestel_override: targetToestel,
+          planning_run_id: Number(selectedPlanningRunId),
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`HTTP ${res.status}: ${text}`);
+      }
+
+      await loadPlanningRunRows(selectedPlanningRunId, { keepSelectedDate: true });
+    } catch (error) {
+      console.error("Fout bij toestel aanpassen:", error);
+    } finally {
+      setIsDraggingTask(false);
+      setDragOverCell(null);
+      setLoading(false);
+    }
+  };
+
   const applyTaskReorder = async (planningId: string, targetPlanningId: string) => {
     if (!planningId) return;
     if (!targetPlanningId) return;
@@ -1353,6 +1387,88 @@ export default function PlanningOverview() {
                                         {row["Planner kandidaatdagen"]}
                                       </pre>
                                     </details>
+                                  ) : null}
+
+                                  {row["Planning ID"] ? (
+                                    <div
+                                    onClick={(e) => e.stopPropagation()}
+                                    onMouseDown={(e) => e.stopPropagation()}  
+                                    style={{
+                                        padding: 8,
+                                        borderRadius: 8,
+                                        background: colors.bgMuted,
+                                        border: `1px solid ${colors.border}`,
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: 6,
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          fontSize: 11,
+                                          fontWeight: 800,
+                                          color: colors.textMuted,
+                                          textTransform: "uppercase",
+                                          letterSpacing: "0.04em",
+                                        }}
+                                      >
+                                        Toestel override
+                                      </div>
+
+                                      <div
+                                        style={{
+                                          display: "flex",
+                                          gap: 6,
+                                          alignItems: "center",
+                                          flexWrap: "wrap",
+                                        }}
+                                      >
+                                        <input
+                                          type="text"
+                                          onClick={(e) => e.stopPropagation()}
+                                          onMouseDown={(e) => e.stopPropagation()}
+                                          defaultValue={row.Toestel || ""}
+                                          placeholder="Bijv. Snelkoeler 2"
+                                          id={`toestel-${taskId}`}
+                                          style={{
+                                            padding: "5px 8px",
+                                            borderRadius: 6,
+                                            border: `1px solid ${colors.border}`,
+                                            fontSize: 11,
+                                            minWidth: 150,
+                                            flex: 1,
+                                          }}
+                                        />
+
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+
+                                            const input = document.getElementById(
+                                              `toestel-${taskId}`
+                                            ) as HTMLInputElement | null;
+
+                                            if (!input) return;
+
+                                            applyToestelOverride(
+                                              row["Planning ID"] || "",
+                                              input.value.trim()
+                                            );
+                                          }}
+                                          style={{
+                                            fontSize: 11,
+                                            padding: "5px 8px",
+                                            borderRadius: 6,
+                                            border: `1px solid ${colors.border}`,
+                                            background: colors.primarySoft,
+                                            cursor: "pointer",
+                                          }}
+                                        >
+                                          Opslaan
+                                        </button>
+                                      </div>
+                                    </div>
                                   ) : null}
 
                                   {/* BESTAANDE BLOK LATEN STAAN */}
