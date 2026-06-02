@@ -177,8 +177,10 @@ export default function PlanningOverview() {
   const [rows, setRows] = useState<PlanningRow[]>([]);
   const [planningRuns, setPlanningRuns] = useState<PlanningRun[]>([]);
   const [selectedPlanningRunId, setSelectedPlanningRunId] = useState("");
-  const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(getCurrentMondayIso());
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+
+  const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<OverviewMode>("day");
   const [selectedPost, setSelectedPost] = useState("");
   const [printMode, setPrintMode] = useState<PrintMode>("day");
@@ -189,6 +191,37 @@ export default function PlanningOverview() {
   const [dragError, setDragError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  useEffect(() => {
+    const savedRunId = localStorage.getItem("selectedPlanningRunId");
+    const savedDate = localStorage.getItem("selectedPlanningDate");
+
+    if (savedRunId) {
+      setSelectedPlanningRunId(savedRunId);
+    }
+
+    if (savedDate) {
+      setSelectedDate(savedDate);
+    }
+
+    setPreferencesLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!preferencesLoaded) return;
+
+    if (selectedPlanningRunId) {
+      localStorage.setItem("selectedPlanningRunId", selectedPlanningRunId);
+    }
+  }, [preferencesLoaded, selectedPlanningRunId]);
+
+  useEffect(() => {
+    if (!preferencesLoaded) return;
+
+    if (selectedDate) {
+      localStorage.setItem("selectedPlanningDate", selectedDate);
+    }
+  }, [preferencesLoaded, selectedDate]);
+
   const loadPlanningRunRows = async (
     planningRunId: string,
     options?: { keepSelectedDate?: boolean }
@@ -197,6 +230,7 @@ export default function PlanningOverview() {
 
     try {
       setLoading(true);
+
       if (!options?.keepSelectedDate) {
         setDragError(null);
       }
@@ -253,10 +287,16 @@ export default function PlanningOverview() {
       setPlanningRuns(runs);
 
       const activeRun = runs.find((run) => run.actief) || runs[0];
+      const savedRunId = localStorage.getItem("selectedPlanningRunId");
 
-      if (activeRun) {
-        setSelectedPlanningRunId(String(activeRun.id));
-        await loadPlanningRunRows(String(activeRun.id));
+      const preferredRun =
+        runs.find((run) => String(run.id) === savedRunId) || activeRun;
+
+      if (preferredRun) {
+        const preferredRunId = String(preferredRun.id);
+
+        setSelectedPlanningRunId(preferredRunId);
+        await loadPlanningRunRows(preferredRunId, { keepSelectedDate: true });
       }
     } catch (error) {
       console.error("Fout bij ophalen planningen:", error);
@@ -267,6 +307,8 @@ export default function PlanningOverview() {
   };
 
   useEffect(() => {
+    if (!preferencesLoaded) return;
+
     loadPlanningRuns();
 
     const handlePlanningRunsChanged = () => {
@@ -280,7 +322,7 @@ export default function PlanningOverview() {
       window.removeEventListener("planning-runs-changed", handlePlanningRunsChanged);
       window.removeEventListener("focus", handlePlanningRunsChanged);
     };
-  }, []);
+  }, [preferencesLoaded]);
 
   const applyWorkdayOverride = async (planningId: string, targetWorkday: string) => {
     if (!targetWorkday) return;
