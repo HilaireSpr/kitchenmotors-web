@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import PlannerTest from "@/components/planner-test";
 import ImportRecipes from "@/components/recipes";
 import MenuItems from "@/components/menu-items";
@@ -80,6 +80,18 @@ export default function DashboardTabs({
   apiStatus,
 }: DashboardTabsProps) {
   const [activeTab, setActiveTab] = useState<DashboardTab>("recepten");
+
+  useEffect(() => {
+    const savedTab = localStorage.getItem("activeTab") as DashboardTab | null;
+
+    if (savedTab) {
+      setActiveTab(savedTab);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("activeTab", activeTab);
+  }, [activeTab]);
 
   const activeTabConfig = useMemo(
     () => TABS.find((tab) => tab.key === activeTab) ?? TABS[0],
