@@ -23,6 +23,9 @@ type PlanningRow = {
   "Dependency warning"?: string | null;
   "Dependency previous task"?: string | null;
   "Dependency previous end"?: string | null;
+  "Planner reden"?: string | null;
+  "Planner score"?: string | null;
+  "Planner kandidaatdagen"?: string | null;
 };
 
 type PlanningRun = {
@@ -1275,6 +1278,85 @@ export default function PlanningOverview() {
                                     gap: 6,
                                   }}
                                 >
+
+                                  {/* NIEUW BLOK HIER */}
+
+                                  {row["Planner reden"] ? (
+                                    <div
+                                      style={{
+                                        padding: 8,
+                                        borderRadius: 8,
+                                        background: "#fff8de",
+                                        border: "1px solid #f6d860",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: 6,
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          fontSize: 11,
+                                          fontWeight: 800,
+                                          color: colors.textMuted,
+                                          textTransform: "uppercase",
+                                          letterSpacing: "0.04em",
+                                        }}
+                                      >
+                                        Waarom zo gepland?
+                                      </div>
+
+                                      <div
+                                        style={{
+                                          fontSize: 11,
+                                          color: colors.text,
+                                          lineHeight: 1.4,
+                                        }}
+                                      >
+                                        {row["Planner reden"]}
+                                      </div>
+
+                                      {row["Planner score"] ? (
+                                        <div
+                                          style={{
+                                            fontSize: 10,
+                                            color: colors.textMuted,
+                                          }}
+                                        >
+                                          Score: {row["Planner score"]}
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  ) : null}
+
+                                  {row["Planner kandidaatdagen"] ? (
+                                    <details>
+                                      <summary
+                                        style={{
+                                          cursor: "pointer",
+                                          fontSize: 11,
+                                          fontWeight: 700,
+                                          color: colors.textMuted,
+                                        }}
+                                      >
+                                        Planner analyse
+                                      </summary>
+
+                                      <pre
+                                        style={{
+                                          marginTop: 8,
+                                          fontSize: 10,
+                                          whiteSpace: "pre-wrap",
+                                          overflowWrap: "break-word",
+                                          color: colors.text,
+                                        }}
+                                      >
+                                        {row["Planner kandidaatdagen"]}
+                                      </pre>
+                                    </details>
+                                  ) : null}
+
+                                  {/* BESTAANDE BLOK LATEN STAAN */}
+
                                   <div
                                     style={{
                                       fontSize: 11,
