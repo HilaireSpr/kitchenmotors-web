@@ -12,6 +12,7 @@ type PlanningRow = {
   Post?: string | null;
   Taak?: string | null;
   Recept?: string | null;
+  Toestel?: string | null;
   Start?: string | null;
   Einde?: string | null;
   Locked?: boolean | null;
