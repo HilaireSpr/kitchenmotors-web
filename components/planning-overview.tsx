@@ -1406,7 +1406,10 @@ export default function PlanningOverview() {
                                   ) : null}
 
                                   {row["Planner kandidaatdagen"] ? (
-                                    <details>
+                                    <details
+                                      onClick={(e) => e.stopPropagation()}
+                                      onMouseDown={(e) => e.stopPropagation()}
+                                    >
                                       <summary
                                         style={{
                                           cursor: "pointer",
