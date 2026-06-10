@@ -1329,21 +1329,6 @@ export default function PlanningOverview() {
                                 {row.Taak || "Onbekend"}
                               </div>
 
-                              {row.Recept ? (
-                                <div
-                                  style={{
-                                    fontSize: 10,
-                                    color: colors.textMuted,
-                                    lineHeight: 1.2,
-                                    whiteSpace: "nowrap",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                  }}
-                                >
-                                  {row.Recept}
-                                </div>
-                              ) : null}
-
                               {isExpanded ? (
                                 <div
                                   style={{
@@ -1356,7 +1341,18 @@ export default function PlanningOverview() {
                                   }}
                                 >
 
-                                  {/* NIEUW BLOK HIER */}
+                                  {row.Recept ? (
+                                    <div
+                                      style={{
+                                        fontSize: 11,
+                                        color: colors.textMuted,
+                                        lineHeight: 1.3,
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      Recept: {row.Recept}
+                                    </div>
+                                  ) : null}
 
                                   {row["Planner reden"] ? (
                                     <div
