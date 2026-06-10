@@ -188,6 +188,7 @@ export default function PlanningOverview() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isDraggingTask, setIsDraggingTask] = useState(false);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
+  const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const [dragError, setDragError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -1102,6 +1103,7 @@ export default function PlanningOverview() {
                           await handleDropOnCell(rawRow, day.day, post);
                         } finally {
                           setDragOverCell(null);
+                          setDragOverTaskId(null);
                           setIsDraggingTask(false);
                         }
                       }}
@@ -1163,6 +1165,10 @@ export default function PlanningOverview() {
                               onDragOver={(e) => {
                                 e.preventDefault();
                                 e.dataTransfer.dropEffect = "move";
+                                setDragOverTaskId(taskId);
+                              }}
+                              onDragLeave={() => {
+                                setDragOverTaskId(null);
                               }}
                               onDrop={async (e) => {
                                 e.preventDefault();
@@ -1174,6 +1180,7 @@ export default function PlanningOverview() {
                                   await handleDropOnTask(rawRow, row, day.day, post);
                                 } finally {
                                   setDragOverCell(null);
+                                  setDragOverTaskId(null);
                                   setIsDraggingTask(false);
                                 }
                               }}
@@ -1187,6 +1194,7 @@ export default function PlanningOverview() {
                                 setSelectedTaskId(taskId);
                               }}
                               style={{
+                                position: "relative",
                                 display: "flex",
                                 flexDirection: "column",
                                 gap: 3,
@@ -1209,6 +1217,21 @@ export default function PlanningOverview() {
                                   : "Klik om stappen te tonen"
                               }
                             >
+                              {dragOverTaskId === taskId ? (
+                                <div
+                                  style={{
+                                    position: "absolute",
+                                    left: 6,
+                                    right: 6,
+                                    bottom: -4,
+                                    height: 4,
+                                    borderRadius: 999,
+                                    background: colors.primary,
+                                    boxShadow: "0 0 0 2px rgba(255, 192, 0, 0.25)",
+                                    pointerEvents: "none",
+                                  }}
+                                />
+                              ) : null}
                               <div
                                 style={{
                                   display: "flex",
