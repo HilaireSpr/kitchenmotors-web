@@ -1280,41 +1280,6 @@ export default function PlanningOverview() {
                                       ⚠
                                     </span>
                                   ) : null}
-
-                                  {row["Dependency status"] === "blocked" ? (
-                                    <span
-                                      style={{
-                                        fontSize: 11,
-                                        padding: "2px 6px",
-                                        borderRadius: 999,
-                                        background: "#fee2e2",
-                                        color: "#991b1b",
-                                        fontWeight: 700,
-                                      }}
-                                      title={row["Dependency warning"] || "Volgordeprobleem"}
-                                    >
-                                      ⚠ volgorde
-                                    </span>
-                                  ) : null}
-
-                                  {row["Dependency status"] === "warning" ? (
-                                    <span
-                                      style={{
-                                        fontSize: 11,
-                                        padding: "2px 6px",
-                                        borderRadius: 999,
-                                        background: "#fef3c7",
-                                        color: "#92400e",
-                                        fontWeight: 700,
-                                      }}
-                                      title={
-                                        row["Dependency warning"] ||
-                                        "Afhankelijkheid niet controleerbaar"
-                                      }
-                                    >
-                                      ? volgorde
-                                    </span>
-                                  ) : null}
                                 </div>
                               </div>
 
