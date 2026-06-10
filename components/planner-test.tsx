@@ -578,6 +578,8 @@ export default function PlannerTest() {
         setSelectedPlanningRunId(String(newPlanningRunId));
       }
 
+      setPlanningName("");
+
       await loadPlanningStarturen();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Onbekende fout");
