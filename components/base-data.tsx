@@ -10,6 +10,7 @@ type BaseDataItem = {
   naam: string;
   kleur?: string | null;
   capaciteit_minuten?: number | null;
+  startuur?: string | null;
 };
 
 type BaseDataSection = "posten" | "toestellen";
@@ -24,11 +25,17 @@ const inputStyle = {
 
 export default function BaseData() {
   const [posten, setPosten] = useState<BaseDataItem[]>([]);
+  const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [editPostName, setEditPostName] = useState("");
+  const [editPostColor, setEditPostColor] = useState("#dbeafe");
+  const [editPostCapacity, setEditPostCapacity] = useState(480);
+  const [editPostStartuur, setEditPostStartuur] = useState("08:00");
   const [toestellen, setToestellen] = useState<BaseDataItem[]>([]);
 
   const [newPost, setNewPost] = useState("");
   const [newPostColor, setNewPostColor] = useState("#dbeafe");
-  const [newPostCapacity, setNewPostCapacity] = useState(450);
+  const [newPostCapacity, setNewPostCapacity] = useState(480);
+  const [newPostStartuur, setNewPostStartuur] = useState("08:00");
 
   const [newToestel, setNewToestel] = useState("");
   const [loading, setLoading] = useState(false);
@@ -86,6 +93,7 @@ export default function BaseData() {
           naam: newPost.trim(),
           kleur: newPostColor,
           capaciteit_minuten: newPostCapacity,
+          startuur: newPostStartuur,
         }),
       });
 
@@ -96,7 +104,8 @@ export default function BaseData() {
 
       setNewPost("");
       setNewPostColor("#dbeafe");
-      setNewPostCapacity(450);
+      setNewPostCapacity(480);
+      setNewPostStartuur("08:00");
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fout bij toevoegen post");
@@ -119,6 +128,42 @@ export default function BaseData() {
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fout bij verwijderen post");
+    }
+  }
+
+  async function updatePost(id: number) {
+    try {
+      setError("");
+
+      const res = await fetch(
+        `${API_URL}/api/v1/base-data/posten/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            naam: editPostName,
+            kleur: editPostColor,
+            capaciteit_minuten: editPostCapacity,
+            startuur: editPostStartuur,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Post aanpassen mislukt: ${text}`);
+      }
+
+      setEditingPostId(null);
+      await loadData();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Fout bij aanpassen post"
+      );
     }
   }
 
@@ -298,7 +343,7 @@ export default function BaseData() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "minmax(220px, 1fr) 64px 140px auto",
+                  gridTemplateColumns: "minmax(220px, 1fr) 64px 140px 130px auto",
                   gap: 8,
                   alignItems: "end",
                 }}
@@ -348,6 +393,22 @@ export default function BaseData() {
                     value={newPostCapacity}
                     onChange={(e) => setNewPostCapacity(Number(e.target.value))}
                     title="Capaciteit minuten"
+                    style={{
+                      ...inputStyle,
+                      width: "100%",
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 6 }}>
+                    Startuur
+                  </div>
+                  <input
+                    type="time"
+                    value={newPostStartuur}
+                    onChange={(e) => setNewPostStartuur(e.target.value)}
+                    title="Startuur"
                     style={{
                       ...inputStyle,
                       width: "100%",
@@ -411,27 +472,120 @@ export default function BaseData() {
                           }}
                         />
 
-                        <div>
-                          <div style={{ fontWeight: 700 }}>{post.naam}</div>
-                          <div style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
-                            Capaciteit: {post.capaciteit_minuten ?? 450} min
+                        {editingPostId === post.id ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: 8,
+                              alignItems: "center",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <input
+                              value={editPostName}
+                              onChange={(e) => setEditPostName(e.target.value)}
+                              style={inputStyle}
+                            />
+
+                            <input
+                              type="color"
+                              value={editPostColor}
+                              onChange={(e) => setEditPostColor(e.target.value)}
+                            />
+
+                            <input
+                              type="number"
+                              value={editPostCapacity}
+                              onChange={(e) =>
+                                setEditPostCapacity(Number(e.target.value))
+                              }
+                              style={{
+                                ...inputStyle,
+                                width: 100,
+                              }}
+                            />
+
+                            <input
+                              type="time"
+                              value={editPostStartuur}
+                              onChange={(e) => setEditPostStartuur(e.target.value)}
+                              style={{
+                                ...inputStyle,
+                                width: 120,
+                              }}
+                            />
+
+                            <button
+                              className="button"
+                              onClick={() => updatePost(post.id)}
+                            >
+                              Opslaan
+                            </button>
+
+                            <button
+                              className="button"
+                              onClick={() => setEditingPostId(null)}
+                            >
+                              Annuleren
+                            </button>
                           </div>
-                        </div>
+                        ) : (
+                          <div>
+                            <div style={{ fontWeight: 700 }}>
+                              {post.naam}
+                            </div>
+
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: colors.textMuted,
+                                marginTop: 2,
+                              }}
+                            >
+                              Capaciteit: {post.capaciteit_minuten ?? 480} min · Startuur: {post.startuur || "08:00"}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
-                      <button
-                        type="button"
-                        className="button"
-                        onClick={() => deletePost(post.id)}
+                      <div
                         style={{
-                          background: colors.bg,
-                          color: colors.text,
-                          border: `1px solid ${colors.border}`,
+                          display: "flex",
+                          gap: 8,
                         }}
                       >
-                        Verwijderen
-                      </button>
-                    </div>
+                        <button
+                          type="button"
+                          className="button"
+                          onClick={() => {
+                            setEditingPostId(post.id);
+                            setEditPostName(post.naam);
+                            setEditPostColor(post.kleur || "#dbeafe");
+                            setEditPostCapacity(post.capaciteit_minuten || 480);
+                            setEditPostStartuur(post.startuur || "08:00");
+                          }}
+                          style={{
+                            background: colors.bg,
+                            color: colors.text,
+                            border: `1px solid ${colors.border}`,
+                          }}
+                        >
+                          Bewerken
+                        </button>
+
+                        <button
+                          type="button"
+                          className="button"
+                          onClick={() => deletePost(post.id)}
+                          style={{
+                            background: colors.bg,
+                            color: colors.text,
+                            border: `1px solid ${colors.border}`,
+                          }}
+                        >
+                          Verwijderen
+                        </button>
+                      </div>                    </div>
                   ))}
                 </div>
               )}
