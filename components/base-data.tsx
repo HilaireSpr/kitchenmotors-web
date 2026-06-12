@@ -78,6 +78,35 @@ export default function BaseData() {
     loadData();
   }, []);
 
+  async function resetPlanningStarturen() {
+    const confirmed = window.confirm(
+      "Weet je zeker dat je alle planning-starturen wilt resetten? Bij de volgende planner run worden ze opnieuw opgebouwd uit de standaard starturen van de posten."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setError("");
+
+      const res = await fetch(`${API_URL}/api/v1/base-data/planning-starturen/reset`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Planning-starturen resetten mislukt: ${text}`);
+      }
+
+      alert("Planning-starturen zijn gereset. Maak nu een nieuwe planner run.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Fout bij resetten planning-starturen"
+      );
+    }
+  }
+
   async function addPost() {
     if (!newPost.trim()) return;
 
@@ -339,6 +368,20 @@ export default function BaseData() {
                   Voeg keukenposten toe en geef elke post een kleur en capaciteit.
                 </p>
               </div>
+
+              <button
+                type="button"
+                className="button"
+                onClick={resetPlanningStarturen}
+                style={{
+                  background: colors.bgMuted,
+                  color: colors.text,
+                  border: `1px solid ${colors.border}`,
+                  width: "fit-content",
+                }}
+              >
+                Reset planning-starturen
+              </button>
 
               <div
                 style={{
