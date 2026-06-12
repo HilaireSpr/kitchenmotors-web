@@ -11,6 +11,13 @@ type BaseDataItem = {
   kleur?: string | null;
   capaciteit_minuten?: number | null;
   startuur?: string | null;
+  actief_maandag?: number | null;
+  actief_dinsdag?: number | null;
+  actief_woensdag?: number | null;
+  actief_donderdag?: number | null;
+  actief_vrijdag?: number | null;
+  actief_zaterdag?: number | null;
+  actief_zondag?: number | null;
 };
 
 type BaseDataSection = "posten" | "toestellen";
@@ -23,6 +30,16 @@ const inputStyle = {
   color: colors.text,
 };
 
+const weekdayFields = [
+  ["actief_maandag", "Ma"],
+  ["actief_dinsdag", "Di"],
+  ["actief_woensdag", "Wo"],
+  ["actief_donderdag", "Do"],
+  ["actief_vrijdag", "Vr"],
+  ["actief_zaterdag", "Za"],
+  ["actief_zondag", "Zo"],
+] as const;
+
 export default function BaseData() {
   const [posten, setPosten] = useState<BaseDataItem[]>([]);
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
@@ -30,12 +47,30 @@ export default function BaseData() {
   const [editPostColor, setEditPostColor] = useState("#dbeafe");
   const [editPostCapacity, setEditPostCapacity] = useState(480);
   const [editPostStartuur, setEditPostStartuur] = useState("08:00");
+  const [editPostActiveDays, setEditPostActiveDays] = useState({
+    actief_maandag: 1,
+    actief_dinsdag: 1,
+    actief_woensdag: 1,
+    actief_donderdag: 1,
+    actief_vrijdag: 1,
+    actief_zaterdag: 1,
+    actief_zondag: 1,
+  });
   const [toestellen, setToestellen] = useState<BaseDataItem[]>([]);
 
   const [newPost, setNewPost] = useState("");
   const [newPostColor, setNewPostColor] = useState("#dbeafe");
   const [newPostCapacity, setNewPostCapacity] = useState(480);
   const [newPostStartuur, setNewPostStartuur] = useState("08:00");
+  const [newPostActiveDays, setNewPostActiveDays] = useState({
+    actief_maandag: 1,
+    actief_dinsdag: 1,
+    actief_woensdag: 1,
+    actief_donderdag: 1,
+    actief_vrijdag: 1,
+    actief_zaterdag: 1,
+    actief_zondag: 1,
+  });
 
   const [newToestel, setNewToestel] = useState("");
   const [loading, setLoading] = useState(false);
@@ -123,6 +158,7 @@ export default function BaseData() {
           kleur: newPostColor,
           capaciteit_minuten: newPostCapacity,
           startuur: newPostStartuur,
+          ...newPostActiveDays,
         }),
       });
 
@@ -135,6 +171,15 @@ export default function BaseData() {
       setNewPostColor("#dbeafe");
       setNewPostCapacity(480);
       setNewPostStartuur("08:00");
+      setNewPostActiveDays({
+        actief_maandag: 1,
+        actief_dinsdag: 1,
+        actief_woensdag: 1,
+        actief_donderdag: 1,
+        actief_vrijdag: 1,
+        actief_zaterdag: 1,
+        actief_zondag: 1,
+      });
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fout bij toevoegen post");
@@ -176,6 +221,7 @@ export default function BaseData() {
             kleur: editPostColor,
             capaciteit_minuten: editPostCapacity,
             startuur: editPostStartuur,
+            ...editPostActiveDays,
           }),
         }
       );
@@ -558,6 +604,24 @@ export default function BaseData() {
                               }}
                             />
 
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                              {weekdayFields.map(([field, label]) => (
+                                <label key={field} style={{ fontSize: 12 }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={editPostActiveDays[field] === 1}
+                                    onChange={(e) =>
+                                      setEditPostActiveDays((prev) => ({
+                                        ...prev,
+                                        [field]: e.target.checked ? 1 : 0,
+                                      }))
+                                    }
+                                  />{" "}
+                                  {label}
+                                </label>
+                              ))}
+                            </div>
+
                             <button
                               className="button"
                               onClick={() => updatePost(post.id)}
@@ -585,7 +649,11 @@ export default function BaseData() {
                                 marginTop: 2,
                               }}
                             >
-                              Capaciteit: {post.capaciteit_minuten ?? 480} min · Startuur: {post.startuur || "08:00"}
+                              Capaciteit: {post.capaciteit_minuten ?? 480} min · Startuur: {post.startuur || "08:00"} · Actief:{" "}
+                              {weekdayFields
+                                .filter(([field]) => (post[field] ?? 1) === 1)
+                                .map(([, label]) => label)
+                                .join(", ")}
                             </div>
                           </div>
                         )}
@@ -606,6 +674,15 @@ export default function BaseData() {
                             setEditPostColor(post.kleur || "#dbeafe");
                             setEditPostCapacity(post.capaciteit_minuten || 480);
                             setEditPostStartuur(post.startuur || "08:00");
+                            setEditPostActiveDays({
+                              actief_maandag: post.actief_maandag ?? 1,
+                              actief_dinsdag: post.actief_dinsdag ?? 1,
+                              actief_woensdag: post.actief_woensdag ?? 1,
+                              actief_donderdag: post.actief_donderdag ?? 1,
+                              actief_vrijdag: post.actief_vrijdag ?? 1,
+                              actief_zaterdag: post.actief_zaterdag ?? 1,
+                              actief_zondag: post.actief_zondag ?? 1,
+                            });
                           }}
                           style={{
                             background: colors.bg,
