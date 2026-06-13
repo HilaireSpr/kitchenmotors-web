@@ -33,6 +33,8 @@ type RecipeHandeling = {
   volgorde_handeling: number;
   post: string;
   toestel: string;
+  post_policy: string;
+  alternatieve_posten: string;
   dag_offset: number;
   dag_offset_min: number;
   dag_offset_max: number;
@@ -57,6 +59,8 @@ type HandelingFormState = {
   naam: string;
   post: string;
   toestel: string;
+  postPolicy: string;
+  alternatievePosten: string[];
   dag_offset: string;
   dag_offset_min: string;
   dag_offset_max: string;
@@ -78,11 +82,18 @@ type NewRecipeFormState = {
   menu_groep: string;
 };
 
+type PostOption = {
+  id: number;
+  naam: string;
+};
+
 function createEmptyHandelingForm(): HandelingFormState {
   return {
     naam: "",
     post: "",
     toestel: "",
+    postPolicy: "flexible",
+    alternatievePosten: [],
     dag_offset: "0",
     dag_offset_min: "0",
     dag_offset_max: "0",
@@ -177,6 +188,7 @@ export default function ImportRecipes() {
   const [editingStapId, setEditingStapId] = useState<number | null>(null);
   const [savingStapId, setSavingStapId] = useState<number | null>(null);
   const [stapForm, setStapForm] = useState<StapFormState>(createEmptyStapForm());
+  const [posten, setPosten] = useState<PostOption[]>([]);
 
   async function loadRecipes() {
     try {
@@ -193,6 +205,22 @@ export default function ImportRecipes() {
     } catch (err) {
       console.error("Fout bij ophalen receptenlijst:", err);
       setRecipes([]);
+    }
+  }
+
+  async function loadPosten() {
+    try {
+      const res = await fetch(`${API_URL}/api/v1/base-data/posten`);
+
+      if (!res.ok) {
+        throw new Error("Kon posten niet laden");
+      }
+
+      const json = await res.json();
+      setPosten(Array.isArray(json.result) ? json.result : []);
+    } catch (err) {
+      console.error("Fout bij ophalen posten:", err);
+      setPosten([]);
     }
   }
 
@@ -342,6 +370,12 @@ export default function ImportRecipes() {
           naam: newHandelingForm.naam.trim(),
           post: newHandelingForm.post.trim() || null,
           toestel: newHandelingForm.toestel.trim() || null,
+          post_policy:
+            newHandelingForm.alternatievePosten.length > 0
+              ? "flexible"
+              : "fixed",
+          alternatieve_posten:
+            newHandelingForm.alternatievePosten.join(","),
           dag_offset: dagOffset,
           min_offset_dagen: dagOffsetMin,
           max_offset_dagen: dagOffsetMax,
@@ -412,6 +446,7 @@ export default function ImportRecipes() {
 
   useEffect(() => {
     loadRecipes();
+    loadPosten();
   }, []);
 
   function startEditHandeling(handeling: RecipeHandeling) {
@@ -421,6 +456,11 @@ export default function ImportRecipes() {
       naam: handeling.handeling_naam || "",
       post: handeling.post || "",
       toestel: handeling.toestel || "",
+      postPolicy: handeling.post_policy || "flexible",
+      alternatievePosten: String(handeling.alternatieve_posten || "")
+        .split(",")
+        .map((value: string) => value.trim())
+        .filter(Boolean),
       dag_offset: String(handeling.dag_offset ?? 0),
       dag_offset_min: String(handeling.dag_offset_min ?? handeling.dag_offset ?? 0),
       dag_offset_max: String(handeling.dag_offset_max ?? handeling.dag_offset ?? 0),
@@ -540,6 +580,12 @@ export default function ImportRecipes() {
         handeling_naam: handelingForm.naam,
         post: handelingForm.post,
         toestel: handelingForm.toestel,
+        post_policy:
+          handelingForm.alternatievePosten.length > 0
+            ? "flexible"
+            : "fixed",
+        alternatieve_posten:
+          handelingForm.alternatievePosten.join(","),
         dag_offset: dagOffset,
         min_offset_dagen: dagOffsetMin,
         max_offset_dagen: dagOffsetMax,
@@ -1026,6 +1072,19 @@ export default function ImportRecipes() {
                       }
                     />
 
+                    <AlternativePostCheckboxes
+                      voorkeurspost={newHandelingForm.post}
+                      selected={newHandelingForm.alternatievePosten}
+                      posten={posten}
+                      onChange={(next) =>
+                        setNewHandelingForm((prev) => ({
+                          ...prev,
+                          alternatievePosten: next,
+                          postPolicy: next.length > 0 ? "flexible" : "fixed",
+                        }))
+                      }
+                    />
+
                     <TextInput
                       label="Toestel"
                       value={newHandelingForm.toestel}
@@ -1296,6 +1355,44 @@ export default function ImportRecipes() {
                                   value={handelingForm.post}
                                   onChange={(value) =>
                                     setHandelingForm((prev) => ({ ...prev, post: value }))
+                                  }
+                                />
+
+                                <AlternativePostCheckboxes
+                                  voorkeurspost={handelingForm.post}
+                                  selected={handelingForm.alternatievePosten}
+                                  posten={posten}
+                                  onChange={(next) =>
+                                    setHandelingForm((prev) => ({
+                                      ...prev,
+                                      alternatievePosten: next,
+                                      postPolicy: next.length > 0 ? "flexible" : "fixed",
+                                    }))
+                                  }
+                                />
+
+                                <TextInput
+                                  label="Postbeleid (fixed of flexible)"
+                                  value={handelingForm.postPolicy}
+                                  onChange={(value) =>
+                                    setHandelingForm((prev) => ({
+                                      ...prev,
+                                      postPolicy: value,
+                                    }))
+                                  }
+                                />
+
+                                <TextInput
+                                  label="Alternatieve posten (komma gescheiden)"
+                                  value={handelingForm.alternatievePosten.join(",")}
+                                  onChange={(value) =>
+                                    setHandelingForm((prev) => ({
+                                      ...prev,
+                                      alternatievePosten: value
+                                        .split(",")
+                                        .map((v) => v.trim())
+                                        .filter(Boolean),
+                                    }))
                                   }
                                 />
 
@@ -1955,6 +2052,67 @@ function NumberInput({
         style={inputStyle}
       />
     </label>
+  );
+}
+
+function AlternativePostCheckboxes({
+  voorkeurspost,
+  selected,
+  posten,
+  onChange,
+}: {
+  voorkeurspost: string;
+  selected: string[];
+  posten: PostOption[];
+  onChange: (next: string[]) => void;
+}) {
+  const voorkeur = voorkeurspost.trim();
+
+  const opties = posten.filter((post) => post.naam !== voorkeur);
+
+  if (opties.length === 0) {
+    return null;
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span style={labelTextStyle}>Alternatieve posten</span>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {opties.map((post) => {
+          const checked = selected.includes(post.naam);
+
+          return (
+            <label
+              key={post.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 13,
+                padding: "6px 8px",
+                borderRadius: 8,
+                border: `1px solid ${colors.border}`,
+                background: colors.bg,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    onChange([...selected, post.naam]);
+                  } else {
+                    onChange(selected.filter((value) => value !== post.naam));
+                  }
+                }}
+              />
+              {post.naam}
+            </label>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
