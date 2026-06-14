@@ -169,6 +169,7 @@ export default function MenuItems() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [importing, setImporting] = useState(false);
 
   const [selectedMenuGroep, setSelectedMenuGroep] = useState("");
   const [isNieuweMenuGroep, setIsNieuweMenuGroep] = useState(false);
@@ -234,6 +235,88 @@ export default function MenuItems() {
       setMenuItems([]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleExportMenuGroup(group: string) {
+    try {
+      setError("");
+
+      const res = await fetch(
+        `${API_URL}/api/v1/menu/export/${encodeURIComponent(group)}`
+      );
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Export mislukt");
+      }
+
+      const json = await res.json();
+      const exportPayload = json.result;
+
+      const blob = new Blob([JSON.stringify(exportPayload, null, 2)], {
+        type: "application/json",
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `${group.replaceAll(" ", "_")}_export.json`;
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Export mislukt");
+    }
+  }
+
+  async function handleImportMenuGroup(file: File | null) {
+    if (!file) return;
+
+    try {
+      setImporting(true);
+      setError("");
+
+      const text = await file.text();
+      const payload = JSON.parse(text);
+
+      const targetMenuGroep = window.prompt(
+        "Naam voor geïmporteerde menu-groep:",
+        `${payload.menu_groep || "Menu-groep"} - lokaal test`
+      );
+
+      if (!targetMenuGroep) {
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/api/v1/menu/import`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          export: payload,
+          target_menu_groep: targetMenuGroep,
+        }),
+      });
+
+      if (!res.ok) {
+        const responseText = await res.text();
+        throw new Error(responseText || "Import mislukt");
+      }
+
+      await loadData();
+      setActiveGroup(targetMenuGroep);
+      setOpenGroups((prev) =>
+        prev.includes(targetMenuGroep) ? prev : [...prev, targetMenuGroep]
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Import mislukt");
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -623,15 +706,45 @@ export default function MenuItems() {
             </p>
           </div>
 
-          <div
-            style={{
-              ...subtleBadgeStyle,
-              background: colors.primarySoft,
-              color: colors.text,
-              border: `1px solid ${colors.primaryLight}`,
-            }}
-          >
-            {bestaandeMenuGroepen.length} menu-groepen
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <label
+              className="button"
+              style={{
+                background: colors.bg,
+                color: colors.text,
+                border: `1px solid ${colors.border}`,
+                borderRadius: 12,
+                padding: "10px 14px",
+                fontWeight: 700,
+                cursor: importing ? "not-allowed" : "pointer",
+                opacity: importing ? 0.7 : 1,
+              }}
+            >
+              {importing ? "Importeren..." : "Import JSON"}
+
+              <input
+                type="file"
+                accept=".json"
+                disabled={importing}
+                onChange={(e) => {
+                  const selectedFile = e.target.files?.[0] ?? null;
+                  handleImportMenuGroup(selectedFile);
+                  e.target.value = "";
+                }}
+                style={{ display: "none" }}
+              />
+            </label>
+
+            <div
+              style={{
+                ...subtleBadgeStyle,
+                background: colors.primarySoft,
+                color: colors.text,
+                border: `1px solid ${colors.primaryLight}`,
+              }}
+            >
+              {bestaandeMenuGroepen.length} menu-groepen
+            </div>
           </div>
         </div>
 
@@ -1078,6 +1191,27 @@ export default function MenuItems() {
                         >
                           {items.length} items
                         </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleExportMenuGroup(group);
+                        }}
+                        style={{
+                          border: `1px solid ${colors.border}`,
+                          background: colors.bg,
+                          cursor: "pointer",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: colors.text,
+                          padding: "7px 10px",
+                          borderRadius: 999,
+                          flexShrink: 0,
+                        }}
+                      >
+                        Export
                       </button>
 
                       <button
