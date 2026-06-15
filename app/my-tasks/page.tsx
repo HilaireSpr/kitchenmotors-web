@@ -182,6 +182,42 @@ export default function MyTasksPage() {
             }}
           />
 
+          <div
+            style={{
+              marginTop: 10,
+              paddingTop: 10,
+              borderTop: `1px solid ${colors.border}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                color: colors.textMuted,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Pilotpartner
+            </div>
+
+            <img
+              src="/customer-logos/zol.png"
+              alt="Ziekenhuis Oost-Limburg"
+              style={{
+                maxWidth: 180,
+                width: "55%",
+                height: "auto",
+                display: "block",
+              }}
+            />
+          </div>
+
           <h1
             style={{
               margin: 0,
