@@ -207,7 +207,7 @@ export default function MyTasksPage() {
             </div>
 
             <img
-              src="/customer-logos/zol.png"
+              src="/customer-logos/ZOL-logo.png"
               alt="Ziekenhuis Oost-Limburg"
               style={{
                 maxWidth: 180,
