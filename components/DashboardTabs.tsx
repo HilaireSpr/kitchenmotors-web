@@ -67,6 +67,8 @@ const sidebarCardStyle: CSSProperties = {
   position: "sticky",
   top: 24,
   height: "calc(100vh - 48px)",
+  overflowY: "auto",
+  overflowX: "hidden",
 };
 
 const mainCardStyle: CSSProperties = {
@@ -289,81 +291,6 @@ export default function DashboardTabs({
           minWidth: 0,
         }}
       >
-        <div
-          style={{
-            ...mainCardStyle,
-            padding: "24px 28px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 16,
-            minHeight: 112,
-          }}
-        >
-          <div style={{ minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: colors.primary,
-                marginBottom: 8,
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-              }}
-            >
-              Kitchen planning tool
-            </div>
-
-            <h1
-              style={{
-                margin: 0,
-                fontSize: 40,
-                lineHeight: 1.05,
-                letterSpacing: "-0.03em",
-                color: colors.text,
-              }}
-            >
-              {activeTabConfig.label}
-            </h1>
-
-            <p
-              style={{
-                margin: "10px 0 0 0",
-                color: colors.textMuted,
-                fontSize: 16,
-                lineHeight: 1.5,
-                maxWidth: 760,
-              }}
-            >
-              {activeTabConfig.description}
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              flexWrap: "wrap",
-              justifyContent: "flex-end",
-            }}
-          >
-            <div
-              style={{
-                padding: "10px 14px",
-                borderRadius: 999,
-                border: `1px solid ${colors.border}`,
-                background: colors.bgMuted,
-                color: colors.textMuted,
-                fontSize: 13,
-                fontWeight: 600,
-              }}
-            >
-              Warm planning interface
-            </div>
-          </div>
-        </div>
-
         <div style={{ minWidth: 0 }}>
           <div style={{ display: activeTab === "basisdata" ? "block" : "none" }}>
             <BaseData />
