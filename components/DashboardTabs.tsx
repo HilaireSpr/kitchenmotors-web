@@ -126,29 +126,17 @@ export default function DashboardTabs({
             gap: 6,
           }}
         >
-          <div
+          <img
+            src="/kitchenmotors-logo.png"
+            alt="KitchenMotors"
             style={{
-              fontSize: 30,
-              fontWeight: 800,
-              lineHeight: 1.05,
-              letterSpacing: "-0.02em",
-              color: colors.text,
+              width: "100%",
+              maxWidth: 260,
+              height: "auto",
+              display: "block",
+              margin: "0 auto",
             }}
-          >
-            Kitchen
-            <br />
-            Motors
-          </div>
-
-          <div
-            style={{
-              fontSize: 14,
-              color: colors.textMuted,
-              lineHeight: 1.5,
-            }}
-          >
-            Productieplanning voor grootkeukens
-          </div>
+          />
         </div>
 
         <nav
