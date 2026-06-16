@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     }
 
     const resend = new Resend(apiKey);
-    
+
     const body = await req.json();
 
     const {
@@ -65,27 +65,27 @@ ${message}
       to: email,
       subject: "We hebben je demo-aanvraag ontvangen",
       text: `
-    Beste ${name},
+      Beste ${name},
 
-    Bedankt voor je mail.
+      Bedankt voor je mail.
 
-    We hebben je aanvraag voor een demo van KitchenMotors goed ontvangen.
+      We hebben je aanvraag voor een demo van KitchenMotors goed ontvangen.
 
-    KitchenMotors helpt grootkeukens om recepten, menu's, capaciteit en werkvloeruitvoering samen te brengen in één productieplanning.
+      KitchenMotors helpt grootkeukens om recepten, menu's, capaciteit en werkvloeruitvoering samen te brengen in één productieplanning.
 
-    We nemen normaal binnen 1 werkdag contact met je op om je situatie beter te begrijpen en te bekijken hoe KitchenMotors kan helpen.
+      We nemen normaal binnen 1 werkdag contact met je op om je situatie beter te begrijpen en te bekijken hoe KitchenMotors kan helpen.
 
-    Samenvatting van je aanvraag:
+      Samenvatting van je aanvraag:
 
-    - Bedrijf: ${company}
-    - Type organisatie: ${organizationType}
+      - Bedrijf: ${company}
+      - Type organisatie: ${organizationType}
 
-    Met vriendelijke groeten,
+      Met vriendelijke groeten,
 
-    Hilaire Spreuwers
-    KitchenMotors
-    hilaire@kitchenmotors.be
-    +32 488 99 00 17
+      Hilaire Spreuwers
+      KitchenMotors
+      hilaire@kitchenmotors.be
+      +32 488 99 00 17
       `.trim(),
     });
 
