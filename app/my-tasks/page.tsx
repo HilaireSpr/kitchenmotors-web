@@ -175,12 +175,33 @@ export default function MyTasksPage() {
             alt="KitchenMotors"
             style={{
               width: "100%",
-              maxWidth: 260,
+              maxWidth: 320,
               height: "auto",
               display: "block",
               marginBottom: 12,
             }}
           />
+
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 26,
+              lineHeight: 1.1,
+              color: colors.text,
+            }}
+          >
+            Mijn taken
+          </h1>
+
+          <p
+            style={{
+              margin: "6px 0 0 0",
+              color: colors.textMuted,
+              fontSize: 15,
+            }}
+          >
+            Werkvloerweergave voor post {userId}
+          </p>
 
           <div
             style={{
@@ -205,28 +226,18 @@ export default function MyTasksPage() {
             >
               Pilotpartner
             </div>
+
+            <img
+              src="/customer-logos/ZOL-logo.png"
+              alt="Ziekenhuis Oost-Limburg"
+              style={{
+                maxWidth: 180,
+                width: "55%",
+                height: "auto",
+                display: "block",
+              }}
+            />
           </div>
-
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 26,
-              lineHeight: 1.1,
-              color: colors.text,
-            }}
-          >
-            Mijn taken
-          </h1>
-
-          <p
-            style={{
-              margin: "6px 0 0 0",
-              color: colors.textMuted,
-              fontSize: 15,
-            }}
-          >
-            Werkvloerweergave voor post {userId}
-          </p>
 
           <div
             style={{
