@@ -1,10 +1,20 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function POST(req: Request) {
   try {
+    const apiKey = process.env.RESEND_API_KEY;
+
+    if (!apiKey) {
+      console.error("Missing RESEND_API_KEY");
+      return NextResponse.json(
+        { ok: false, error: "missing_resend_api_key" },
+        { status: 500 }
+      );
+    }
+
+    const resend = new Resend(apiKey);
+    
     const body = await req.json();
 
     const {
@@ -78,7 +88,7 @@ ${message}
     +32 488 99 00 17
       `.trim(),
     });
-    
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Contact form error:", error);
