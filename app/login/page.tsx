@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -56,14 +57,28 @@ export default async function LoginPage({ searchParams }: Props) {
         <div className="stack">
           <Link href="/">← Terug</Link>
 
-          <h1 style={{ fontSize: 48, margin: 0 }}>
-            Kitchen
-            <br />
-            Motors
-          </h1>
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 500,
+            }}
+          >
+            <Image
+              src="/logo.png"
+              alt="KitchenMotors"
+              width={1200}
+              height={300}
+              priority
+              style={{
+                width: "100%",
+                height: "auto",
+              }}
+            />
+          </div>
 
           <p style={{ color: colors.textMuted, maxWidth: 480 }}>
-            Slim plannen voor grootkeukens. Minder chaos, meer overzicht.
+            Productieplanning, capaciteitsplanning, receptbeheer en digitale
+            takenlijsten voor grootkeukens.
           </p>
         </div>
 

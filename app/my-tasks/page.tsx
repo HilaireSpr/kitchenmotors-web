@@ -205,17 +205,6 @@ export default function MyTasksPage() {
             >
               Pilotpartner
             </div>
-
-            <img
-              src="/customer-logos/ZOL-logo.png"
-              alt="Ziekenhuis Oost-Limburg"
-              style={{
-                maxWidth: 180,
-                width: "55%",
-                height: "auto",
-                display: "block",
-              }}
-            />
           </div>
 
           <h1
