@@ -26,6 +26,12 @@ export default async function DashboardPage() {
     <main className="app-page">
       <DashboardTabs
         userEmail={user.email ?? "onbekend"}
+        userName={
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          user.email?.split("@")[0] ||
+          "gebruiker"
+        }
         apiStatus={apiStatus}
       />
     </main>

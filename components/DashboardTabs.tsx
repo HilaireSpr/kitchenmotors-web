@@ -10,6 +10,7 @@ import { colors } from "@/styles/colors";
 
 type DashboardTabsProps = {
   userEmail: string;
+  userName: string;
   apiStatus: string;
 };
 
@@ -79,6 +80,7 @@ const mainCardStyle: CSSProperties = {
 
 export default function DashboardTabs({
   userEmail,
+  userName,
   apiStatus,
 }: DashboardTabsProps) {
   const [activeTab, setActiveTab] = useState<DashboardTab>("recepten");
@@ -224,12 +226,12 @@ export default function DashboardTabs({
               <div
                 style={{
                   fontSize: 14,
-                  fontWeight: 700,
+                  fontWeight: 800,
                   color: colors.text,
                   wordBreak: "break-word",
                 }}
               >
-                {userEmail}
+                Welkom, {userName}!
               </div>
 
               <div
@@ -237,9 +239,10 @@ export default function DashboardTabs({
                   fontSize: 12,
                   color: colors.textMuted,
                   marginTop: 2,
+                  wordBreak: "break-word",
                 }}
               >
-                Ingelogd
+                {userEmail}
               </div>
             </div>
 

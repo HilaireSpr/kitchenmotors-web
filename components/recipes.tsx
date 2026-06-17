@@ -44,6 +44,7 @@ type RecipeHandeling = {
   is_vaste_taak: boolean;
   heeft_vast_startuur: boolean;
   vast_startuur: string;
+  deadline_time: string;
   stappen: RecipeStep[];
 };
 
@@ -68,6 +69,7 @@ type HandelingFormState = {
   is_vaste_taak: boolean;
   heeft_vast_startuur: boolean;
   vast_startuur: string;
+  deadline_time: string;
 };
 
 type StapFormState = {
@@ -101,6 +103,7 @@ function createEmptyHandelingForm(): HandelingFormState {
     is_vaste_taak: false,
     heeft_vast_startuur: false,
     vast_startuur: "",
+    deadline_time: "",
   };
 }
 
@@ -385,6 +388,8 @@ export default function ImportRecipes() {
           vast_startuur: newHandelingForm.heeft_vast_startuur
             ? newHandelingForm.vast_startuur || "08:00"
             : null,
+          deadline_time:
+            newHandelingForm.deadline_time || null,
         }),
       });
 
@@ -468,6 +473,7 @@ export default function ImportRecipes() {
       is_vaste_taak: handeling.is_vaste_taak ?? false,
       heeft_vast_startuur: handeling.heeft_vast_startuur ?? false,
       vast_startuur: handeling.vast_startuur ?? "",
+      deadline_time: handeling.deadline_time ?? "",
     });
   }
 
@@ -595,6 +601,8 @@ export default function ImportRecipes() {
         vast_startuur: handelingForm.heeft_vast_startuur
           ? handelingForm.vast_startuur
           : "",
+        deadline_time:
+          handelingForm.deadline_time || null,
       };
 
       const res = await fetch(`${API_URL}/api/v1/recipes/handelingen/${handelingId}`, {
@@ -1172,23 +1180,40 @@ export default function ImportRecipes() {
                     </label>
 
                     {newHandelingForm.heeft_vast_startuur ? (
-                      <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        <span style={labelTextStyle}>Startuur</span>
-                        <input
-                          type="time"
-                          value={newHandelingForm.vast_startuur}
-                          onChange={(e) =>
-                            setNewHandelingForm((prev) => ({
-                              ...prev,
-                              vast_startuur: e.target.value,
-                            }))
-                          }
-                          style={inputStyle}
-                        />
-                      </label>
+                      <>
+                        <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          <span style={labelTextStyle}>Startuur</span>
+                          <input
+                            type="time"
+                            value={newHandelingForm.vast_startuur}
+                            onChange={(e) =>
+                              setNewHandelingForm((prev) => ({
+                                ...prev,
+                                vast_startuur: e.target.value,
+                              }))
+                            }
+                            style={inputStyle}
+                          />
+                        </label>
+                      </>
                     ) : (
                       <div />
                     )}
+
+                    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <span style={labelTextStyle}>Deadline vóór uur</span>
+                      <input
+                        type="time"
+                        value={newHandelingForm.deadline_time}
+                        onChange={(e) =>
+                          setNewHandelingForm((prev) => ({
+                            ...prev,
+                            deadline_time: e.target.value,
+                          }))
+                        }
+                        style={inputStyle}
+                      />
+                    </label>
                   </div>
 
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1562,6 +1587,28 @@ export default function ImportRecipes() {
                                 ) : (
                                   <div />
                                 )}
+
+                                <label
+                                  style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 6,
+                                  }}
+                                >
+                                  <span style={labelTextStyle}>Deadline vóór uur</span>
+
+                                  <input
+                                    type="time"
+                                    value={handelingForm.deadline_time}
+                                    onChange={(e) =>
+                                      setHandelingForm((prev) => ({
+                                        ...prev,
+                                        deadline_time: e.target.value,
+                                      }))
+                                    }
+                                    style={inputStyle}
+                                  />
+                                </label>
                               </div>
 
                               <div
@@ -2137,6 +2184,11 @@ function HandelingStats({ handeling }: { handeling: RecipeHandeling }) {
       <SmallStat
         label="Vast startuur"
         value={handeling.heeft_vast_startuur ? handeling.vast_startuur || "-" : "Nee"}
+      />
+
+      <SmallStat
+        label="Deadline"
+        value={handeling.deadline_time || "-"}
       />
     </div>
   );
