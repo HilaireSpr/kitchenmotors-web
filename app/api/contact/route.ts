@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     }
 
     await resend.emails.send({
-      from: "KitchenMotors Website <onboarding@resend.dev>",
+      from: "KitchenMotors Website <noreply@kitchenmotors.be>",
       to: process.env.CONTACT_TO_EMAIL || "hilaire@kitchenmotors.be",
       replyTo: email,
       subject: `Nieuwe demo aanvraag van ${company}`,
