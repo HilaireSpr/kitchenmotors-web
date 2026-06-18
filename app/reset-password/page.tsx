@@ -14,12 +14,28 @@ export default function ResetPasswordPage() {
       const supabase = createClient();
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
+      const tokenHash = params.get("token_hash");
+      const type = params.get("type");
 
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (error) {
           setMessage("Reset link is ongeldig of verlopen.");
+          setIsReady(true);
+          return;
+        }
+
+        window.history.replaceState({}, document.title, "/reset-password");
+      } else if (tokenHash && type === "recovery") {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: "recovery",
+        });
+
+        if (error) {
+          setMessage("Reset link is ongeldig of verlopen.");
+          setIsReady(true);
           return;
         }
 
