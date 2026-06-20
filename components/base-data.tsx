@@ -22,6 +22,22 @@ type BaseDataItem = {
 
 type BaseDataSection = "posten" | "toestellen";
 
+type PostWerkurenDag = {
+  cyclus_week: number;
+  weekdag: number;
+  actief: boolean;
+  startuur: string | null;
+  einduur: string | null;
+};
+
+type PostWerkurenState = {
+  post_id: number;
+  post_naam?: string;
+  cyclus_weken: number;
+  cyclus_startdatum: string | null;
+  dagen: PostWerkurenDag[];
+};
+
 const inputStyle = {
   padding: "8px 10px",
   borderRadius: 8,
@@ -40,9 +56,32 @@ const weekdayFields = [
   ["actief_zondag", "Zo"],
 ] as const;
 
+const weekdayNames = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
+
+function createDefaultWerkurenDays(cyclusWeken: number): PostWerkurenDag[] {
+  const dagen: PostWerkurenDag[] = [];
+
+  for (let cyclusWeek = 1; cyclusWeek <= cyclusWeken; cyclusWeek += 1) {
+    for (let weekdag = 0; weekdag <= 6; weekdag += 1) {
+      dagen.push({
+        cyclus_week: cyclusWeek,
+        weekdag,
+        actief: weekdag <= 4,
+        startuur: weekdag <= 4 ? "08:00" : null,
+        einduur: weekdag <= 4 ? "16:00" : null,
+      });
+    }
+  }
+
+  return dagen;
+}
+
 export default function BaseData() {
   const [posten, setPosten] = useState<BaseDataItem[]>([]);
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [editingWerkurenPostId, setEditingWerkurenPostId] = useState<number | null>(null);
+  const [werkuren, setWerkuren] = useState<PostWerkurenState | null>(null);
+  const [werkurenSaving, setWerkurenSaving] = useState(false);
   const [editPostName, setEditPostName] = useState("");
   const [editPostColor, setEditPostColor] = useState("#dbeafe");
   const [editPostCapacity, setEditPostCapacity] = useState(480);
@@ -239,6 +278,144 @@ export default function BaseData() {
           ? err.message
           : "Fout bij aanpassen post"
       );
+    }
+  }
+
+  async function loadPostWerkuren(post: BaseDataItem) {
+    try {
+      setError("");
+      setEditingWerkurenPostId(post.id);
+
+      const res = await fetch(`${API_URL}/api/v1/base-data/posten/${post.id}/werkuren`);
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Postwerkuren laden mislukt: ${text}`);
+      }
+
+      const json = await res.json();
+
+      const cyclusWeken = json.cyclus_weken || 1;
+      const bestaandeDagen = Array.isArray(json.dagen) ? json.dagen : [];
+      const fallbackDagen = createDefaultWerkurenDays(cyclusWeken);
+
+      setWerkuren({
+        post_id: post.id,
+        post_naam: post.naam,
+        cyclus_weken: cyclusWeken,
+        cyclus_startdatum: json.cyclus_startdatum || null,
+        dagen: fallbackDagen.map((fallbackDag) => {
+          const bestaandeDag = bestaandeDagen.find(
+            (dag: PostWerkurenDag) =>
+              dag.cyclus_week === fallbackDag.cyclus_week &&
+              dag.weekdag === fallbackDag.weekdag
+          );
+
+          return bestaandeDag
+            ? {
+                cyclus_week: bestaandeDag.cyclus_week,
+                weekdag: bestaandeDag.weekdag,
+                actief: Boolean(bestaandeDag.actief),
+                startuur: bestaandeDag.startuur,
+                einduur: bestaandeDag.einduur,
+              }
+            : fallbackDag;
+        }),
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Fout bij laden postwerkuren");
+    }
+  }
+
+  function updateWerkurenDag(
+    cyclusWeek: number,
+    weekdag: number,
+    patch: Partial<PostWerkurenDag>
+  ) {
+    setWerkuren((prev) => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        dagen: prev.dagen.map((dag) =>
+          dag.cyclus_week === cyclusWeek && dag.weekdag === weekdag
+            ? { ...dag, ...patch }
+            : dag
+        ),
+      };
+    });
+  }
+
+  function updateWerkurenCyclus(cyclusWeken: number) {
+    setWerkuren((prev) => {
+      if (!prev) return prev;
+
+      const nieuweDagen = createDefaultWerkurenDays(cyclusWeken);
+
+      return {
+        ...prev,
+        cyclus_weken: cyclusWeken,
+        dagen: nieuweDagen.map((nieuweDag) => {
+          const bestaandeDag = prev.dagen.find(
+            (dag) =>
+              dag.cyclus_week === nieuweDag.cyclus_week &&
+              dag.weekdag === nieuweDag.weekdag
+          );
+
+          return bestaandeDag || nieuweDag;
+        }),
+      };
+    });
+  }
+
+  async function saveWerkuren() {
+    if (!werkuren) return;
+
+    try {
+      setWerkurenSaving(true);
+      setError("");
+
+      const res = await fetch(
+        `${API_URL}/api/v1/base-data/posten/${werkuren.post_id}/werkuren`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            cyclus_weken: werkuren.cyclus_weken,
+            cyclus_startdatum: werkuren.cyclus_startdatum,
+            dagen: werkuren.dagen,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Postwerkuren opslaan mislukt: ${text}`);
+      }
+
+      const json = await res.json();
+
+      setWerkuren({
+        post_id: json.post_id,
+        post_naam: json.post_naam,
+        cyclus_weken: json.cyclus_weken || 1,
+        cyclus_startdatum: json.cyclus_startdatum || null,
+        dagen: Array.isArray(json.dagen) ? json.dagen.map((dag: PostWerkurenDag) => ({
+          cyclus_week: dag.cyclus_week,
+          weekdag: dag.weekdag,
+          actief: Boolean(dag.actief),
+          startuur: dag.startuur,
+          einduur: dag.einduur,
+        })) : [],
+      });
+
+      alert("Postwerkuren opgeslagen.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Fout bij opslaan postwerkuren");
+    } finally {
+      setWerkurenSaving(false);
     }
   }
 
@@ -518,6 +695,181 @@ export default function BaseData() {
                 </button>
               </div>
 
+              {werkuren && editingWerkurenPostId ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 12,
+                    padding: 12,
+                    borderRadius: 10,
+                    border: `1px solid ${colors.border}`,
+                    background: colors.bgMuted,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 700 }}>
+                      Postwerkuren: {werkuren.post_naam}
+                    </div>
+                    <div style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
+                      Stel hier in wanneer deze productiepost beschikbaar is.
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      flexWrap: "wrap",
+                      alignItems: "end",
+                    }}
+                  >
+                    <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <span style={{ fontSize: 12, color: colors.textMuted }}>
+                        Cyclus
+                      </span>
+                      <select
+                        value={werkuren.cyclus_weken}
+                        onChange={(e) => updateWerkurenCyclus(Number(e.target.value))}
+                        style={inputStyle}
+                      >
+                        <option value={1}>1 week</option>
+                        <option value={2}>2 weken</option>
+                        <option value={3}>3 weken</option>
+                        <option value={4}>4 weken</option>
+                      </select>
+                    </label>
+
+                    <button
+                      type="button"
+                      className="button"
+                      onClick={saveWerkuren}
+                      disabled={werkurenSaving}
+                      style={{
+                        background: colors.primary,
+                        color: colors.text,
+                      }}
+                    >
+                      {werkurenSaving ? "Opslaan..." : "Werkuren opslaan"}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="button"
+                      onClick={() => {
+                        setEditingWerkurenPostId(null);
+                        setWerkuren(null);
+                      }}
+                      style={{
+                        background: colors.bg,
+                        color: colors.text,
+                        border: `1px solid ${colors.border}`,
+                      }}
+                    >
+                      Sluiten
+                    </button>
+                  </div>
+
+                  {Array.from({ length: werkuren.cyclus_weken }, (_, index) => index + 1).map(
+                    (cyclusWeek) => (
+                      <div
+                        key={cyclusWeek}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 8,
+                          padding: 10,
+                          borderRadius: 10,
+                          border: `1px solid ${colors.border}`,
+                          background: colors.bg,
+                        }}
+                      >
+                        <div style={{ fontWeight: 700 }}>Week {cyclusWeek}</div>
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "80px 90px 130px 130px",
+                            gap: 8,
+                            alignItems: "center",
+                          }}
+                        >
+                          <div style={{ fontSize: 12, color: colors.textMuted }}>Dag</div>
+                          <div style={{ fontSize: 12, color: colors.textMuted }}>Actief</div>
+                          <div style={{ fontSize: 12, color: colors.textMuted }}>Startuur</div>
+                          <div style={{ fontSize: 12, color: colors.textMuted }}>Einduur</div>
+
+                          {weekdayNames.map((label, weekdag) => {
+                            const dag = werkuren.dagen.find(
+                              (item) =>
+                                item.cyclus_week === cyclusWeek && item.weekdag === weekdag
+                            );
+
+                            if (!dag) return null;
+
+                            return (
+                              <div
+                                key={`${cyclusWeek}-${weekdag}`}
+                                style={{
+                                  display: "contents",
+                                }}
+                              >
+                                <div style={{ fontWeight: 600 }}>{label}</div>
+
+                                <label style={{ fontSize: 13 }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={dag.actief}
+                                    onChange={(e) =>
+                                      updateWerkurenDag(cyclusWeek, weekdag, {
+                                        actief: e.target.checked,
+                                        startuur: e.target.checked ? dag.startuur || "08:00" : null,
+                                        einduur: e.target.checked ? dag.einduur || "16:00" : null,
+                                      })
+                                    }
+                                  />{" "}
+                                  actief
+                                </label>
+
+                                <input
+                                  type="time"
+                                  value={dag.startuur || ""}
+                                  disabled={!dag.actief}
+                                  onChange={(e) =>
+                                    updateWerkurenDag(cyclusWeek, weekdag, {
+                                      startuur: e.target.value || null,
+                                    })
+                                  }
+                                  style={{
+                                    ...inputStyle,
+                                    opacity: dag.actief ? 1 : 0.5,
+                                  }}
+                                />
+
+                                <input
+                                  type="time"
+                                  value={dag.einduur || ""}
+                                  disabled={!dag.actief}
+                                  onChange={(e) =>
+                                    updateWerkurenDag(cyclusWeek, weekdag, {
+                                      einduur: e.target.value || null,
+                                    })
+                                  }
+                                  style={{
+                                    ...inputStyle,
+                                    opacity: dag.actief ? 1 : 0.5,
+                                  }}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              ) : null}
+
               {loading ? (
                 <div style={{ color: colors.textMuted, fontSize: 14 }}>Laden...</div>
               ) : posten.length === 0 ? (
@@ -665,6 +1017,19 @@ export default function BaseData() {
                           gap: 8,
                         }}
                       >
+                        <button
+                          type="button"
+                          className="button"
+                          onClick={() => loadPostWerkuren(post)}
+                          style={{
+                            background: editingWerkurenPostId === post.id ? colors.selectedBg : colors.bg,
+                            color: colors.text,
+                            border: `1px solid ${colors.border}`,
+                          }}
+                        >
+                          Werkuren
+                        </button>
+
                         <button
                           type="button"
                           className="button"
