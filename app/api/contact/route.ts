@@ -40,7 +40,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const fromEmail = "KitchenMotors Website <noreply@send.kitchenmotors.be>";
+    const fromEmail = "KitchenMotors Website <noreply@kitchenmotors.be>";
 
     const internalMail = await resend.emails.send({
       from: fromEmail,
