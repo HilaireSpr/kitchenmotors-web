@@ -14,7 +14,6 @@ export async function POST(req: Request) {
     }
 
     const resend = new Resend(apiKey);
-
     const body = await req.json();
 
     const {
@@ -41,8 +40,10 @@ export async function POST(req: Request) {
       );
     }
 
-    await resend.emails.send({
-      from: "KitchenMotors Website <noreply@send.kitchenmotors.be>",
+    const fromEmail = "KitchenMotors Website <noreply@send.kitchenmotors.be>";
+
+    const internalMail = await resend.emails.send({
+      from: fromEmail,
       to: process.env.CONTACT_TO_EMAIL || "hilaire@kitchenmotors.be",
       replyTo: email,
       subject: `Nieuwe demo aanvraag van ${company}`,
@@ -60,34 +61,50 @@ ${message}
       `.trim(),
     });
 
-    await resend.emails.send({
-      from: "KitchenMotors Website <noreply@send.kitchenmotors.be>",
+    if (internalMail.error) {
+      console.error("Internal mail error:", internalMail.error);
+      return NextResponse.json(
+        { ok: false, error: "internal_mail_failed" },
+        { status: 500 }
+      );
+    }
+
+    const confirmationMail = await resend.emails.send({
+      from: fromEmail,
       to: email,
       subject: "We hebben je demo-aanvraag ontvangen",
       text: `
-      Beste ${name},
+Beste ${name},
 
-      Bedankt voor je mail.
+Bedankt voor je mail.
 
-      We hebben je aanvraag voor een demo van KitchenMotors goed ontvangen.
+We hebben je aanvraag voor een demo van KitchenMotors goed ontvangen.
 
-      KitchenMotors helpt grootkeukens om recepten, menu's, capaciteit en werkvloeruitvoering samen te brengen in één productieplanning.
+KitchenMotors helpt grootkeukens om recepten, menu's, capaciteit en werkvloeruitvoering samen te brengen in één productieplanning.
 
-      We nemen normaal binnen 1 werkdag contact met je op om je situatie beter te begrijpen en te bekijken hoe KitchenMotors kan helpen.
+We nemen normaal binnen 1 werkdag contact met je op.
 
-      Samenvatting van je aanvraag:
+Samenvatting van je aanvraag:
 
-      - Bedrijf: ${company}
-      - Type organisatie: ${organizationType}
+- Bedrijf: ${company}
+- Type organisatie: ${organizationType}
 
-      Met vriendelijke groeten,
+Met vriendelijke groeten,
 
-      Hilaire Spreuwers
-      KitchenMotors
-      hilaire@kitchenmotors.be
-      +32 488 99 00 17
+Hilaire Spreuwers
+KitchenMotors
+hilaire@kitchenmotors.be
++32 488 99 00 17
       `.trim(),
     });
+
+    if (confirmationMail.error) {
+      console.error("Confirmation mail error:", confirmationMail.error);
+      return NextResponse.json(
+        { ok: false, error: "confirmation_mail_failed" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
