@@ -61,7 +61,7 @@ ${message}
     });
 
     await resend.emails.send({
-      from: "KitchenMotors Website <onboarding@resend.dev>",
+      from: "KitchenMotors Website <noreply@send.kitchenmotors.be>",
       to: email,
       subject: "We hebben je demo-aanvraag ontvangen",
       text: `
