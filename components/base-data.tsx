@@ -11,6 +11,7 @@ type BaseDataItem = {
   kleur?: string | null;
   capaciteit_minuten?: number | null;
   startuur?: string | null;
+  planning_fase?: number | null;
   actief_maandag?: number | null;
   actief_dinsdag?: number | null;
   actief_woensdag?: number | null;
@@ -86,6 +87,7 @@ export default function BaseData() {
   const [editPostColor, setEditPostColor] = useState("#dbeafe");
   const [editPostCapacity, setEditPostCapacity] = useState(480);
   const [editPostStartuur, setEditPostStartuur] = useState("08:00");
+  const [editPostPlanningFase, setEditPostPlanningFase] = useState(100);
   const [editPostActiveDays, setEditPostActiveDays] = useState({
     actief_maandag: 1,
     actief_dinsdag: 1,
@@ -101,6 +103,7 @@ export default function BaseData() {
   const [newPostColor, setNewPostColor] = useState("#dbeafe");
   const [newPostCapacity, setNewPostCapacity] = useState(480);
   const [newPostStartuur, setNewPostStartuur] = useState("08:00");
+  const [newPostPlanningFase, setNewPostPlanningFase] = useState(100);
   const [newPostActiveDays, setNewPostActiveDays] = useState({
     actief_maandag: 1,
     actief_dinsdag: 1,
@@ -197,6 +200,7 @@ export default function BaseData() {
           kleur: newPostColor,
           capaciteit_minuten: newPostCapacity,
           startuur: newPostStartuur,
+          planning_fase: newPostPlanningFase,
           ...newPostActiveDays,
         }),
       });
@@ -209,6 +213,7 @@ export default function BaseData() {
       setNewPost("");
       setNewPostColor("#dbeafe");
       setNewPostCapacity(480);
+      setNewPostStartuur("08:00");
       setNewPostStartuur("08:00");
       setNewPostActiveDays({
         actief_maandag: 1,
@@ -260,6 +265,7 @@ export default function BaseData() {
             kleur: editPostColor,
             capaciteit_minuten: editPostCapacity,
             startuur: editPostStartuur,
+            planning_fase: editPostPlanningFase,
             ...editPostActiveDays,
           }),
         }
@@ -668,19 +674,20 @@ export default function BaseData() {
 
                 <div>
                   <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 6 }}>
-                    Startuur
+                    Prioriteit
                   </div>
                   <input
-                    type="time"
-                    value={newPostStartuur}
-                    onChange={(e) => setNewPostStartuur(e.target.value)}
-                    title="Startuur"
+                    type="number"
+                    min={1}
+                    value={newPostPlanningFase}
+                    onChange={(e) => setNewPostPlanningFase(Number(e.target.value))}
+                    title="Prioriteit: lager nummer = vroeger behandeld door de planner"
                     style={{
                       ...inputStyle,
                       width: "100%",
                     }}
-                  />
-                </div>
+                  />                  
+                  </div>
 
                 <button
                   className="button"
@@ -947,9 +954,11 @@ export default function BaseData() {
                             />
 
                             <input
-                              type="time"
-                              value={editPostStartuur}
-                              onChange={(e) => setEditPostStartuur(e.target.value)}
+                              type="number"
+                              min={1}
+                              value={editPostPlanningFase}
+                              onChange={(e) => setEditPostPlanningFase(Number(e.target.value))}
+                              title="Prioriteit: lager nummer = vroeger behandeld door de planner"
                               style={{
                                 ...inputStyle,
                                 width: 120,
@@ -1001,7 +1010,7 @@ export default function BaseData() {
                                 marginTop: 2,
                               }}
                             >
-                              Capaciteit: {post.capaciteit_minuten ?? 480} min · Startuur: {post.startuur || "08:00"} · Actief:{" "}
+                              Capaciteit: {post.capaciteit_minuten ?? 480} min · Prioriteit: {post.planning_fase ?? 100} · Actief:{" "}
                               {weekdayFields
                                 .filter(([field]) => (post[field] ?? 1) === 1)
                                 .map(([, label]) => label)
@@ -1039,6 +1048,7 @@ export default function BaseData() {
                             setEditPostColor(post.kleur || "#dbeafe");
                             setEditPostCapacity(post.capaciteit_minuten || 480);
                             setEditPostStartuur(post.startuur || "08:00");
+                            setEditPostPlanningFase(post.planning_fase || 100);
                             setEditPostActiveDays({
                               actief_maandag: post.actief_maandag ?? 1,
                               actief_dinsdag: post.actief_dinsdag ?? 1,
