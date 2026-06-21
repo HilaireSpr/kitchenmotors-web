@@ -1995,10 +1995,6 @@ export default function PlanningOverview() {
             margin: 12mm;
           }
 
-          body * {
-            visibility: hidden !important;
-          }
-
           .planning-overview-root,
           .planning-overview-root * {
             visibility: visible !important;

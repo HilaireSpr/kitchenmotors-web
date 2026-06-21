@@ -43,6 +43,7 @@ export function Footer() {
           <Link href="/oplossing">Oplossing</Link>
           <Link href="/workfloor">Workfloor</Link>
           <Link href="/roadmap">Roadmap</Link>
+          <Link href="/over-hilaire">Over Hilaire</Link>
           <Link href="/contact">Contact</Link>
           <Link href="/login">Login</Link>
         </div>
