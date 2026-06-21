@@ -514,6 +514,48 @@ export default function ImportRecipes() {
     setStapForm(createEmptyStapForm());
   }
 
+  async function deleteAllRecipes() {
+    const firstConfirm = window.confirm(
+      "Alle recepten verwijderen? Dit verwijdert ook alle handelingen, stappen en menu-items. Dit kan niet ongedaan worden."
+    );
+
+    if (!firstConfirm) return;
+
+    const secondConfirm = window.confirm(
+      "Weet je het zeker? Gebruik dit alleen om de receptendatabase leeg te maken vóór een nieuwe import."
+    );
+
+    if (!secondConfirm) return;
+
+    try {
+      setError("");
+
+      const res = await fetch(`${API_URL}/api/v1/recipes/admin/reset-recipes`, {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text);
+      }
+
+      closeRecipeDetail();
+      setRecipes([]);
+      setOpenCategories([]);
+      setResult(null);
+
+      window.dispatchEvent(new Event("recipes-changed"));
+
+      alert("Alle recepten zijn verwijderd.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Fout bij verwijderen van alle recepten"
+      );
+    }
+  }
+
   async function deleteSelectedRecipe() {
     if (!recipeDetail?.recept_id) {
       alert("Geen recept ID gevonden.");
@@ -676,18 +718,32 @@ export default function ImportRecipes() {
             </p>
           </div>
 
-          <button
-            type="button"
-            className="button"
-            onClick={() => setShowCreateRecipe((current) => !current)}
-            style={{
-              background: colors.primary,
-              color: colors.text,
-              flexShrink: 0,
-            }}
-          >
-            {showCreateRecipe ? "Nieuw recept annuleren" : "Nieuw recept"}
-          </button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", flexShrink: 0 }}>
+            <button
+              type="button"
+              className="button"
+              onClick={deleteAllRecipes}
+              style={{
+                background: colors.bg,
+                color: colors.danger,
+                border: `1px solid ${colors.danger}`,
+              }}
+            >
+              Alle recepten verwijderen
+            </button>
+
+            <button
+              type="button"
+              className="button"
+              onClick={() => setShowCreateRecipe((current) => !current)}
+              style={{
+                background: colors.primary,
+                color: colors.text,
+              }}
+            >
+              {showCreateRecipe ? "Nieuw recept annuleren" : "Nieuw recept"}
+            </button>
+          </div>
         </div>
       </div>
 
