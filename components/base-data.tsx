@@ -403,19 +403,8 @@ export default function BaseData() {
 
       const json = await res.json();
 
-      setWerkuren({
-        post_id: json.post_id,
-        post_naam: json.post_naam,
-        cyclus_weken: json.cyclus_weken || 1,
-        cyclus_startdatum: json.cyclus_startdatum || null,
-        dagen: Array.isArray(json.dagen) ? json.dagen.map((dag: PostWerkurenDag) => ({
-          cyclus_week: dag.cyclus_week,
-          weekdag: dag.weekdag,
-          actief: Boolean(dag.actief),
-          startuur: dag.startuur,
-          einduur: dag.einduur,
-        })) : [],
-      });
+      setWerkuren(null);
+      setEditingWerkurenPostId(null);
 
       alert("Postwerkuren opgeslagen.");
     } catch (err) {
