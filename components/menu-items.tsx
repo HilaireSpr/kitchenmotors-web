@@ -176,6 +176,7 @@ export default function MenuItems() {
   const [nieuweMenuGroep, setNieuweMenuGroep] = useState("");
 
   const [selectedRecipeId, setSelectedRecipeId] = useState("");
+  const [recipeSearch, setRecipeSearch] = useState("");
   const [serveerdag, setServeerdag] = useState("");
   const [herhalingType, setHerhalingType] = useState<HerhalingType>("single");
   const [customDagen, setCustomDagen] = useState<string[]>([]);
@@ -387,7 +388,18 @@ export default function MenuItems() {
       return sortedRecipes;
     }
 
-    return sortedRecipes.filter((recipe) => {
+    const search = recipeSearch.trim().toLowerCase();
+
+    const searchFilteredRecipes = sortedRecipes.filter((recipe) => {
+      if (!search) return true;
+
+      return (
+        getRecipeCode(recipe).toLowerCase().includes(search) ||
+        getRecipeNaam(recipe).toLowerCase().includes(search)
+      );
+    });
+
+    return searchFilteredRecipes.filter((recipe) => {
       const recipeId = getRecipeId(recipe);
       if (!recipeId) return false;
 
@@ -400,6 +412,21 @@ export default function MenuItems() {
     });
   }, [recipes, menuItems, gekozenMenuGroep]);
 
+  const filteredRecipeOptions = useMemo(() => {
+    const search = recipeSearch.trim().toLowerCase();
+
+    if (!search) return beschikbareRecipes.slice(0, 20);
+
+    return beschikbareRecipes
+      .filter((recipe) => {
+        const code = getRecipeCode(recipe).toLowerCase();
+        const naam = getRecipeNaam(recipe).toLowerCase();
+
+        return code.includes(search) || naam.includes(search);
+      })
+      .slice(0, 20);
+  }, [beschikbareRecipes, recipeSearch]);
+
   useEffect(() => {
     if (!selectedRecipeId) return;
 
@@ -410,6 +437,8 @@ export default function MenuItems() {
 
     if (!exists) {
       setSelectedRecipeId("");
+      setRecipeSearch("");
+      setServeerdag("");
     }
   }, [beschikbareRecipes, selectedRecipeId]);
 
@@ -817,33 +846,84 @@ export default function MenuItems() {
 
           <div>
             <div style={labelStyle}>Recept</div>
-            <select
-              value={selectedRecipeId}
+
+            <input
+              value={recipeSearch}
               onChange={(e) => {
-                setSelectedRecipeId(e.target.value);
+                setRecipeSearch(e.target.value);
+                setSelectedRecipeId("");
                 setError("");
               }}
+              placeholder={!gekozenMenuGroep ? "Kies eerst menu-groep" : "Typ receptcode of naam..."}
               style={inputStyle}
               disabled={!gekozenMenuGroep}
-            >
-              <option value="">
-                {!gekozenMenuGroep ? "Kies eerst menu-groep" : "Kies recept"}
-              </option>
-              {beschikbareRecipes.map((recipe) => {
-                const recipeId = getRecipeId(recipe);
-                if (!recipeId) return null;
+            />
 
-                const recipeCode = getRecipeCode(recipe);
-                const recipeNaam = getRecipeNaam(recipe);
+            {gekozenMenuGroep && recipeSearch.trim() ? (
+              <div
+                style={{
+                  marginTop: 8,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: 12,
+                  background: colors.bg,
+                  overflow: "hidden",
+                  maxHeight: 260,
+                  overflowY: "auto",
+                }}
+              >
+                {filteredRecipeOptions.length === 0 ? (
+                  <div style={{ padding: 12, color: colors.textMuted, fontSize: 14 }}>
+                    Geen recepten gevonden.
+                  </div>
+                ) : (
+                  filteredRecipeOptions.map((recipe) => {
+                    const recipeId = getRecipeId(recipe);
+                    if (!recipeId) return null;
 
-                return (
-                  <option key={recipeId} value={recipeId}>
-                    {recipeCode ? `${recipeCode} - ` : ""}
-                    {recipeNaam}
-                  </option>
-                );
-              })}
-            </select>
+                    const recipeCode = getRecipeCode(recipe);
+                    const recipeNaam = getRecipeNaam(recipe);
+                    const isSelected = String(recipeId) === selectedRecipeId;
+
+                    return (
+                      <button
+                        key={recipeId}
+                        type="button"
+                        onClick={() => {
+                          setSelectedRecipeId(String(recipeId));
+                          setRecipeSearch(`${recipeCode ? `${recipeCode} - ` : ""}${recipeNaam}`);
+                          setError("");
+                        }}
+                        style={{
+                          width: "100%",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 3,
+                          textAlign: "left",
+                          padding: "10px 12px",
+                          border: "none",
+                          borderBottom: `1px solid ${colors.border}`,
+                          background: isSelected ? colors.selectedBg : colors.bg,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <span style={{ fontWeight: 700 }}>
+                          {recipeCode || "-"}
+                        </span>
+                        <span style={{ fontSize: 13, color: colors.textMuted }}>
+                          {recipeNaam || "-"}
+                        </span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            ) : null}
+
+            {selectedRecipeId ? (
+              <div style={{ marginTop: 6, fontSize: 12, color: colors.textMuted }}>
+                Recept geselecteerd
+              </div>
+            ) : null}
           </div>
 
           <div>

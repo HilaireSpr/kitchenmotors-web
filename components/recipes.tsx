@@ -163,6 +163,7 @@ export default function ImportRecipes() {
   const [selectedRecipe, setSelectedRecipe] = useState<string | null>(null);
   const [recipeDetail, setRecipeDetail] = useState<RecipeDetail | null>(null);
   const [openCategories, setOpenCategories] = useState<string[]>([]);
+  const [recipeSearch, setRecipeSearch] = useState("");
 
   const [showCreateRecipe, setShowCreateRecipe] = useState(false);
   const [creatingRecipe, setCreatingRecipe] = useState(false);
@@ -192,6 +193,7 @@ export default function ImportRecipes() {
   const [savingStapId, setSavingStapId] = useState<number | null>(null);
   const [stapForm, setStapForm] = useState<StapFormState>(createEmptyStapForm());
   const [posten, setPosten] = useState<PostOption[]>([]);
+  
 
   async function loadRecipes() {
     try {
@@ -670,9 +672,20 @@ export default function ImportRecipes() {
   }
 
   const recipesByCategory = useMemo(() => {
+    const filteredRecipes = recipes.filter((recipe) => {
+      const search = recipeSearch.trim().toLowerCase();
+
+        if (!search) return true;
+
+        return (
+          recipe.recept_code?.toLowerCase().includes(search) ||
+          recipe.recept_naam?.toLowerCase().includes(search)
+        );
+      });
+
     const map = new Map<string, RecipeListItem[]>();
 
-    for (const recipe of recipes) {
+    for (const recipe of filteredRecipes) {
       const category = recipe.categorie?.trim() || "Zonder categorie";
 
       if (!map.has(category)) {
@@ -688,7 +701,7 @@ export default function ImportRecipes() {
         category,
         items: [...items].sort((a, b) => a.recept_code.localeCompare(b.recept_code)),
       }));
-  }, [recipes]);
+  }, [recipes, recipeSearch]);
 
   const toggleCategory = (category: string) => {
     setOpenCategories((prev) =>
@@ -878,6 +891,14 @@ export default function ImportRecipes() {
               Geïmporteerde recepten, gegroepeerd per categorie.
             </p>
           </div>
+
+          <input
+            type="text"
+            placeholder="Zoek receptcode of naam..."
+            value={recipeSearch}
+            onChange={(e) => setRecipeSearch(e.target.value)}
+            style={inputStyle}
+          />
 
           {recipesByCategory.length === 0 ? (
             <div
