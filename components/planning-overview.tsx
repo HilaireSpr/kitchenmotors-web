@@ -626,6 +626,47 @@ export default function PlanningOverview() {
     }, 0);
   };
 
+  async function handleExportExcel() {
+    if (mode !== "day") {
+      alert("Export werkt momenteel alleen voor Alleen gekozen dag.");
+      return;
+    }
+
+    if (!selectedDate) {
+      alert("Geen dag geselecteerd om te exporteren.");
+      return;
+    }
+
+    const response = await fetch(`${API_URL}/api/v1/planning/export-day`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        werkdag: selectedDate,
+        rows,
+      }),
+    });
+
+    if (!response.ok) {
+      alert(`Export mislukt: ${response.status} ${response.statusText}`);
+      return;
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `planning_${selectedDate}.xlsx`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.URL.revokeObjectURL(url);
+  }
+
   const toggleTaskExpanded = (taskId: string) => {
     setExpandedTaskIds((prev) =>
       prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
@@ -918,6 +959,24 @@ export default function PlanningOverview() {
             }}
           >
             {isFullscreen ? "Sluit fullscreen" : "Fullscreen"}
+          </button>
+
+          <button
+            type="button"
+            className="button"
+            onClick={handleExportExcel}
+            disabled={!selectedPlanningRunId}
+            style={{
+              background: colors.bg,
+              color: colors.text,
+              opacity: selectedPlanningRunId ? 1 : 0.5,
+              border: `1px solid ${colors.border}`,
+              borderRadius: 12,
+              padding: "12px 18px",
+              fontWeight: 600,
+            }}
+          >
+            Exporteer Excel
           </button>
         </div>
 

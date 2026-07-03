@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useRouter } from "next/navigation";
 import PlannerTest from "@/components/planner-test";
 import ImportRecipes from "@/components/recipes";
 import MenuItems from "@/components/menu-items";
@@ -8,21 +9,32 @@ import PlanningOverview from "@/components/planning-overview";
 import BaseData from "@/components/base-data";
 import { colors } from "@/styles/colors";
 
+
 type DashboardTabsProps = {
   userEmail: string;
   userName: string;
   apiStatus: string;
 };
 
-type DashboardTab = "basisdata" | "recepten" | "menu" | "planner" | "overzicht";
+type DashboardTab =
+  | "basisdata"
+  | "recepten"
+  | "menu"
+  | "planner"
+  | "overzicht"
+  | "intelligence";
 
 type TabConfig = {
   key: DashboardTab;
   label: string;
   description: string;
+  premium?: boolean;
 };
 
-const TABS: TabConfig[] = [
+const intelligenceEnabled =
+  process.env.NEXT_PUBLIC_INTELLIGENCE_ENABLED === "true";
+
+const BASE_TABS: TabConfig[] = [
   {
     key: "basisdata",
     label: "Basisdata",
@@ -50,6 +62,18 @@ const TABS: TabConfig[] = [
   },
 ];
 
+const TABS: TabConfig[] = intelligenceEnabled
+  ? [
+      ...BASE_TABS,
+      {
+        key: "intelligence",
+        label: "Intelligence",
+        description: "Premium analyses, rapporten en managementinzichten",
+        premium: true,
+      },
+    ]
+  : BASE_TABS;
+
 const shellStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "272px minmax(0, 1fr)",
@@ -72,23 +96,24 @@ const sidebarCardStyle: CSSProperties = {
   overflowX: "hidden",
 };
 
-const mainCardStyle: CSSProperties = {
-  border: `1px solid ${colors.border}`,
-  background: colors.bg,
-  borderRadius: 20,
-};
-
 export default function DashboardTabs({
   userEmail,
   userName,
   apiStatus,
 }: DashboardTabsProps) {
+  const router = useRouter();
+
   const [activeTab, setActiveTab] = useState<DashboardTab>("recepten");
 
   useEffect(() => {
     const savedTab = localStorage.getItem("activeTab") as DashboardTab | null;
 
-    if (savedTab) {
+    if (savedTab === "intelligence" && !intelligenceEnabled) {
+      setActiveTab("recepten");
+      return;
+    }
+
+    if (savedTab && TABS.some((tab) => tab.key === savedTab)) {
       setActiveTab(savedTab);
     }
   }, []);
@@ -101,23 +126,6 @@ export default function DashboardTabs({
     () => TABS.find((tab) => tab.key === activeTab) ?? TABS[0],
     [activeTab]
   );
-
-  function renderActiveTab() {
-    switch (activeTab) {
-      case "basisdata":
-        return <BaseData />;
-      case "recepten":
-        return <ImportRecipes />;
-      case "menu":
-        return <MenuItems />;
-      case "planner":
-        return <PlannerTest />;
-      case "overzicht":
-        return <PlanningOverview />;
-      default:
-        return null;
-    }
-  }
 
   return (
     <div style={shellStyle}>
@@ -157,7 +165,14 @@ export default function DashboardTabs({
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => setActiveTab(tab.key)}
+                onClick={() => {
+                  if (tab.key === "intelligence") {
+                    router.push("/intelligence");
+                    return;
+                  }
+
+                  setActiveTab(tab.key);
+                }}
                 style={{
                   display: "flex",
                   flexDirection: "column",
@@ -185,6 +200,21 @@ export default function DashboardTabs({
                   }}
                 >
                   {tab.label}
+                  {tab.premium ? (
+                    <span
+                      style={{
+                        marginLeft: 8,
+                        padding: "2px 7px",
+                        borderRadius: 999,
+                        background: "rgba(242, 169, 0, 0.16)",
+                        color: colors.warning,
+                        fontSize: 10,
+                        fontWeight: 800,
+                      }}
+                    >
+                      PREMIUM
+                    </span>
+                  ) : null}
                 </span>
 
                 <span
