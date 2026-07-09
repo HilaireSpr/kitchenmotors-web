@@ -33,6 +33,9 @@ type RecipeHandeling = {
   volgorde_handeling: number;
   post: string;
   toestel: string;
+  resource_type?: string;
+  preferred_resource?: string;
+  resource_policy?: string;  
   post_policy: string;
   alternatieve_posten: string;
   dag_offset: number;
@@ -60,6 +63,11 @@ type HandelingFormState = {
   naam: string;
   post: string;
   toestel: string;
+
+  resourceType: string;
+  preferredResource: string;
+  resourcePolicy: string;
+
   postPolicy: string;
   alternatievePosten: string[];
   dag_offset: string;
@@ -94,12 +102,20 @@ function createEmptyHandelingForm(): HandelingFormState {
     naam: "",
     post: "",
     toestel: "",
+
+    resourceType: "",
+    preferredResource: "",
+    resourcePolicy: "flexible",
+
     postPolicy: "flexible",
     alternatievePosten: [],
+
     dag_offset: "0",
     dag_offset_min: "0",
     dag_offset_max: "0",
+
     passieve_tijd: 0,
+
     is_vaste_taak: false,
     heeft_vast_startuur: false,
     vast_startuur: "",
@@ -375,6 +391,11 @@ export default function ImportRecipes() {
           naam: newHandelingForm.naam.trim(),
           post: newHandelingForm.post.trim() || null,
           toestel: newHandelingForm.toestel.trim() || null,
+
+          resource_type: newHandelingForm.resourceType.trim() || null,
+          preferred_resource: newHandelingForm.preferredResource.trim() || null,
+          resource_policy: newHandelingForm.resourcePolicy || "flexible",
+
           post_policy:
             newHandelingForm.alternatievePosten.length > 0
               ? "flexible"
@@ -463,6 +484,11 @@ export default function ImportRecipes() {
       naam: handeling.handeling_naam || "",
       post: handeling.post || "",
       toestel: handeling.toestel || "",
+
+      resourceType: handeling.resource_type || "",
+      preferredResource: handeling.preferred_resource || "",
+      resourcePolicy: handeling.resource_policy || "flexible",
+
       postPolicy: handeling.post_policy || "flexible",
       alternatievePosten: String(handeling.alternatieve_posten || "")
         .split(",")
@@ -630,6 +656,11 @@ export default function ImportRecipes() {
         handeling_naam: handelingForm.naam,
         post: handelingForm.post,
         toestel: handelingForm.toestel,
+
+        resource_type: handelingForm.resourceType,
+        preferred_resource: handelingForm.preferredResource,
+        resource_policy: handelingForm.resourcePolicy,
+
         post_policy:
           handelingForm.alternatievePosten.length > 0
             ? "flexible"
@@ -1398,7 +1429,9 @@ export default function ImportRecipes() {
                             }}
                           >
                             <div>Post: {handeling.post || "-"}</div>
-                            <div>Toestel: {handeling.toestel || "-"}</div>
+                            <div>Resource: {handeling.resource_type || "-"}</div>
+                            <div>Voorkeur: {handeling.preferred_resource || "-"}</div>
+                            <div>Policy: {handeling.resource_policy || "-"}</div>
                           </div>
 
                           <button
@@ -1503,6 +1536,30 @@ export default function ImportRecipes() {
                                   value={handelingForm.toestel}
                                   onChange={(value) =>
                                     setHandelingForm((prev) => ({ ...prev, toestel: value }))
+                                  }
+                                />
+
+                                <TextInput
+                                  label="Resource type"
+                                  value={handelingForm.resourceType}
+                                  onChange={(value) =>
+                                    setHandelingForm((prev) => ({ ...prev, resourceType: value }))
+                                  }
+                                />
+
+                                <TextInput
+                                  label="Preferred resource"
+                                  value={handelingForm.preferredResource}
+                                  onChange={(value) =>
+                                    setHandelingForm((prev) => ({ ...prev, preferredResource: value }))
+                                  }
+                                />
+
+                                <TextInput
+                                  label="Resource policy"
+                                  value={handelingForm.resourcePolicy}
+                                  onChange={(value) =>
+                                    setHandelingForm((prev) => ({ ...prev, resourcePolicy: value }))
                                   }
                                 />
                               </div>
